@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAB432 图像处理服务</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .task-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .task-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .task-item.completed {
+            border-left-color: #28a745;
+        }
+
+        .task-item.failed {
+            border-left-color: #dc3545;
+        }
+
+        .task-item.processing {
+            border-left-color: #ffc107;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .preview {
+            text-align: center;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖼️ CAB432 图像处理服务</h1>
+            <p>CPU密集型图像处理REST API</p>
+        </div>
+
+        <div class="content">
+            <!-- 登录部分 -->
+            <div class="section" id="loginSection">
+                <h2>🔐 用户登录</h2>
+                <div class="form-group">
+                    <label for="username">用户名:</label>
+                    <input type="text" id="username" placeholder="admin 或 user1">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码:</label>
+                    <input type="password" id="password" placeholder="admin123 或 user123">
+                </div>
+                <button class="btn" onclick="login()">登录</button>
+                <div id="loginStatus"></div>
+            </div>
+
+            <!-- 图像上传部分 -->
+            <div class="section hidden" id="uploadSection">
+                <h2>📤 图像上传和处理</h2>
+                <div class="form-group">
+                    <label for="imageFile">选择图像文件:</label>
+                    <input type="file" id="imageFile" accept="image/*">
+                </div>
+                
+                <div class="grid">
+                    <div>
+                        <h3>调整大小</h3>
+                        <div class="form-group">
+                            <label for="width">宽度:</label>
+                            <input type="number" id="width" value="800" min="100" max="3000">
+                        </div>
+                        <div class="form-group">
+                            <label for="height">高度:</label>
+                            <input type="number" id="height" value="600" min="100" max="3000">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3>滤镜效果</h3>
+                        <div class="form-group">
+                            <label for="blur">模糊:</label>
+                            <input type="range" id="blur" min="0" max="10" value="0">
+                            <span id="blurValue">0</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="sharpen">锐化:</label>
+                            <input type="range" id="sharpen" min="0" max="10" value="0">
+                            <span id="sharpenValue">0</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="rotate">旋转:</label>
+                            <input type="range" id="rotate" min="0" max="360" value="0">
+                            <span id="rotateValue">0°</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3>颜色调整</h3>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="grayscale"> 灰度
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="sepia"> 复古
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="brightness">亮度:</label>
+                            <input type="range" id="brightness" min="0.1" max="3" step="0.1" value="1">
+                            <span id="brightnessValue">1.0</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="contrast">对比度:</label>
+                            <input type="range" id="contrast" min="0.1" max="3" step="0.1" value="1">
+                            <span id="contrastValue">1.0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn" onclick="uploadImage()" id="uploadBtn">上传并处理图像</button>
+                <div id="uploadStatus"></div>
+            </div>
+
+            <!-- 任务列表 -->
+            <div class="section hidden" id="tasksSection">
+                <h2>📋 处理任务</h2>
+                <button class="btn" onclick="loadTasks()">刷新任务列表</button>
+                <div id="tasksList" class="task-list"></div>
+            </div>
+
+            <!-- 预览区域 -->
+            <div class="section hidden" id="previewSection">
+                <h2>🖼️ 图像预览</h2>
+                <div class="preview" id="imagePreview">
+                    <p>选择任务查看处理后的图像</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentToken = null;
+        let currentUser = null;
+
+        // 更新滑块值显示
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const valueSpan = document.getElementById(this.id + 'Value');
+                if (valueSpan) {
+                    if (this.id === 'rotate') {
+                        valueSpan.textContent = this.value + '°';
+                    } else {
+                        valueSpan.textContent = parseFloat(this.value).toFixed(1);
+                    }
+                }
+            });
+        });
+
+        // 登录函数
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const statusDiv = document.getElementById('loginStatus');
+
+            if (!username || !password) {
+                showStatus(statusDiv, '请输入用户名和密码', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentToken = data.token;
+                    currentUser = data.user;
+                    showStatus(statusDiv, `登录成功！欢迎 ${data.user.username}`, 'success');
+                    
+                    // 显示其他部分
+                    document.getElementById('uploadSection').classList.remove('hidden');
+                    document.getElementById('tasksSection').classList.remove('hidden');
+                    document.getElementById('previewSection').classList.remove('hidden');
+                    
+                    // 加载任务列表
+                    loadTasks();
+                } else {
+                    showStatus(statusDiv, data.error || '登录失败', 'error');
+                }
+            } catch (error) {
+                showStatus(statusDiv, '网络错误，请检查服务器连接', 'error');
+            }
+        }
+
+        // 上传图像函数
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageFile');
+            const statusDiv = document.getElementById('uploadStatus');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (!fileInput.files[0]) {
+                showStatus(statusDiv, '请选择图像文件', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+
+            // 添加处理选项
+            const options = {
+                resize: {
+                    width: parseInt(document.getElementById('width').value),
+                    height: parseInt(document.getElementById('height').value)
+                },
+                quality: 90,
+                format: 'jpeg',
+                blur: parseInt(document.getElementById('blur').value),
+                sharpen: parseInt(document.getElementById('sharpen').value),
+                rotate: parseInt(document.getElementById('rotate').value),
+                grayscale: document.getElementById('grayscale').checked,
+                sepia: document.getElementById('sepia').checked,
+                brightness: parseFloat(document.getElementById('brightness').value),
+                contrast: parseFloat(document.getElementById('contrast').value)
+            };
+
+            // 添加选项到表单数据
+            Object.keys(options).forEach(key => {
+                if (typeof options[key] === 'object') {
+                    formData.append(key, JSON.stringify(options[key]));
+                } else {
+                    formData.append(key, options[key].toString());
+                }
+            });
+
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span class="loading"></span> 处理中...';
+
+            try {
+                const response = await fetch('/api/images/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showStatus(statusDiv, `图像上传成功！任务ID: ${data.taskId}`, 'success');
+                    fileInput.value = '';
+                    
+                    // 等待一段时间后刷新任务列表
+                    setTimeout(loadTasks, 2000);
+                } else {
+                    showStatus(statusDiv, data.error || '上传失败', 'error');
+                }
+            } catch (error) {
+                showStatus(statusDiv, '网络错误，请检查服务器连接', 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '上传并处理图像';
+            }
+        }
+
+        // 加载任务列表
+        async function loadTasks() {
+            const tasksList = document.getElementById('tasksList');
+            
+            try {
+                const response = await fetch('/api/images/tasks', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+
+                const tasks = await response.json();
+
+                if (response.ok) {
+                    if (tasks.length === 0) {
+                        tasksList.innerHTML = '<p>暂无任务</p>';
+                    } else {
+                        tasksList.innerHTML = tasks.map(task => `
+                            <div class="task-item ${task.status}" onclick="viewTask('${task.id}')">
+                                <h4>${task.originalName}</h4>
+                                <p>状态: ${getStatusText(task.status)}</p>
+                                <p>创建时间: ${new Date(task.createdAt).toLocaleString()}</p>
+                                ${task.completedAt ? `<p>完成时间: ${new Date(task.completedAt).toLocaleString()}</p>` : ''}
+                                ${task.error ? `<p>错误: ${task.error}</p>` : ''}
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    tasksList.innerHTML = '<p>加载任务失败</p>';
+                }
+            } catch (error) {
+                tasksList.innerHTML = '<p>网络错误</p>';
+            }
+        }
+
+        // 查看任务详情
+        async function viewTask(taskId) {
+            const previewDiv = document.getElementById('imagePreview');
+            
+            try {
+                const response = await fetch(`/api/images/image/${taskId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const imageUrl = URL.createObjectURL(blob);
+                    previewDiv.innerHTML = `<img src="${imageUrl}" alt="处理后的图像">`;
+                } else {
+                    previewDiv.innerHTML = '<p>无法加载图像</p>';
+                }
+            } catch (error) {
+                previewDiv.innerHTML = '<p>网络错误</p>';
+            }
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'processing': '处理中',
+                'completed': '已完成',
+                'failed': '失败'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 显示状态信息
+        function showStatus(element, message, type) {
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => {
+                element.innerHTML = '';
+            }, 5000);
+        }
+
+        // 页面加载时检查服务器状态
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/health');
+                if (response.ok) {
+                    console.log('服务器运行正常');
+                }
+            } catch (error) {
+                console.error('无法连接到服务器');
+            }
+        });
+    </script>
+</body>
+</html>
