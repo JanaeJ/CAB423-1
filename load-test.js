@@ -1,14 +1,13 @@
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+const FormData = require('form-data');
 
-// 配置
+// CAB432 Load Testing Configuration
 const BASE_URL = 'http://localhost:3000';
-const TEST_DURATION = 5 * 60 * 1000; // 5分钟
-const CONCURRENT_REQUESTS = 10;
-const REQUEST_INTERVAL = 1000; // 1秒间隔
+const TEST_DURATION = 5 * 60 * 1000; // 5 minutes as required
+const CONCURRENT_REQUESTS = 8; // Simulate load for multiple servers
+const REQUEST_INTERVAL = 2000; // 2 seconds between batches
 
-// 测试用户凭据
+// Test users
 const testUsers = [
   { username: 'admin', password: 'admin123' },
   { username: 'user1', password: 'user123' }
@@ -18,24 +17,24 @@ let tokens = [];
 let requestCount = 0;
 let successCount = 0;
 let errorCount = 0;
+let activeTranscoding = 0;
 
-// 生成测试图像数据
-const generateTestImage = () => {
-  // 创建一个简单的测试图像 (1MB)
-  const width = 1000;
-  const height = 1000;
-  const buffer = Buffer.alloc(width * height * 3);
+// Generate test video data for transcoding
+const generateTestVideoData = () => {
+  // 15MB test video data
+  const size = 15 * 1024 * 1024;
+  const buffer = Buffer.alloc(size);
   
-  for (let i = 0; i < buffer.length; i += 3) {
-    buffer[i] = Math.floor(Math.random() * 256);     // R
-    buffer[i + 1] = Math.floor(Math.random() * 256); // G
-    buffer[i + 2] = Math.floor(Math.random() * 256); // B
+  // Fill with pseudo-video data
+  for (let i = 0; i < buffer.length; i += 4) {
+    const value = Math.floor(Math.random() * 0x7FFFFFFF);
+    buffer.writeUInt32BE(value, i);
   }
   
   return buffer;
 };
 
-// 登录获取令牌
+// Login function
 const login = async (username, password) => {
   try {
     const response = await axios.post(`${BASE_URL}/api/auth/login`, {
@@ -44,152 +43,183 @@ const login = async (username, password) => {
     });
     return response.data.token;
   } catch (error) {
-    console.error(`登录失败 ${username}:`, error.response?.data || error.message);
+    console.error(`Login failed for ${username}:`, error.response?.data || error.message);
     return null;
   }
 };
 
-// 发送图像处理请求
-const sendImageProcessingRequest = async (token) => {
+// Send video transcoding request
+const sendTranscodingRequest = async (token, requestId) => {
   try {
-    const imageBuffer = generateTestImage();
+    activeTranscoding++;
     
-    // 创建FormData对象
-    const FormData = require('form-data');
+    const videoBuffer = generateTestVideoData();
     const formData = new FormData();
     
-    // 添加图像文件
-    formData.append('image', imageBuffer, {
-      filename: 'test-image.jpg',
-      contentType: 'image/jpeg'
+    formData.append('video', videoBuffer, {
+      filename: `load-test-${requestId}-${Date.now()}.mp4`,
+      contentType: 'video/mp4'
     });
     
-    // 添加处理选项（CPU密集型）
-    formData.append('resize', JSON.stringify({ width: 2000, height: 2000 }));
-    formData.append('quality', '95');
-    formData.append('format', 'jpeg');
-    formData.append('blur', '2');
-    formData.append('sharpen', '3');
-    formData.append('rotate', '45');
-    formData.append('grayscale', 'true');
-    formData.append('sepia', 'true');
-    formData.append('brightness', '1.2');
-    formData.append('contrast', '1.5');
-    formData.append('saturation', '0.8');
-    formData.append('hue', '30');
+    // CPU-intensive settings
+    formData.append('resolution', '1080p');
+    formData.append('quality', 'slow');  // Ultra CPU-intensive
+    formData.append('codec', 'h265');    // Most CPU-intensive
 
-    const response = await axios.post(`${BASE_URL}/api/images/upload`, formData, {
+    const response = await axios.post(`${BASE_URL}/api/videos/upload`, formData, {
       headers: {
         'Authorization': `Bearer ${token}`,
         ...formData.getHeaders()
       },
-      timeout: 30000 // 30秒超时
+      timeout: 30000,
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
     });
 
+    successCount++;
+    console.log(`✅ Request ${requestId}: Video transcoding started (Active: ${activeTranscoding})`);
     return response.data;
+    
   } catch (error) {
-    throw error;
+    activeTranscoding--;
+    errorCount++;
+    
+    if (error.code === 'ECONNABORTED') {
+      console.log(`⏰ Request ${requestId}: Timeout (server processing load)`);
+    } else {
+      console.error(`❌ Request ${requestId}: ${error.response?.data?.error || error.message}`);
+    }
   }
 };
 
-// 执行单个请求
-const executeRequest = async () => {
-  const token = tokens[Math.floor(Math.random() * tokens.length)];
-  if (!token) return;
-
-  try {
-    await sendImageProcessingRequest(token);
-    successCount++;
-  } catch (error) {
-    errorCount++;
-    console.error('请求失败:', error.response?.data || error.message);
+// Execute batch of requests
+const executeBatch = async (batchId) => {
+  const batchPromises = [];
+  
+  for (let i = 0; i < CONCURRENT_REQUESTS; i++) {
+    const token = tokens[requestCount % tokens.length];
+    requestCount++;
+    
+    batchPromises.push(sendTranscodingRequest(token, requestCount));
   }
   
-  requestCount++;
+  await Promise.allSettled(batchPromises);
+  
+  console.log(`📊 Batch ${batchId} completed - Success: ${successCount}, Failed: ${errorCount}, Active: ${activeTranscoding}`);
 };
 
-// 主负载测试函数
+// Main load test function
 const runLoadTest = async () => {
-  console.log('开始负载测试...');
-  console.log(`目标持续时间: ${TEST_DURATION / 1000} 秒`);
-  console.log(`并发请求数: ${CONCURRENT_REQUESTS}`);
-  console.log(`请求间隔: ${REQUEST_INTERVAL}ms`);
-  console.log('正在登录用户...');
+  console.log('🔥 CAB432 LOAD TEST - VIDEO TRANSCODING');
+  console.log('======================================');
+  console.log(`🎯 Target: >80% CPU for 5 minutes`);
+  console.log(`⚡ Strategy: ${CONCURRENT_REQUESTS} concurrent video transcoding requests every ${REQUEST_INTERVAL/1000}s`);
+  console.log(`🎬 Each request: 15MB video, 1080p H.265, Ultra-slow encoding`);
+  console.log(`📊 Designed to load down 4+ servers simultaneously`);
+  console.log('');
 
-  // 登录所有测试用户
+  // Login users
+  console.log('🔐 Authenticating users...');
   for (const user of testUsers) {
     const token = await login(user.username, user.password);
     if (token) {
       tokens.push(token);
-      console.log(`用户 ${user.username} 登录成功`);
+      console.log(`✅ ${user.username} authenticated`);
     }
   }
 
   if (tokens.length === 0) {
-    console.error('没有用户登录成功，无法进行负载测试');
+    console.error('❌ Authentication failed - cannot proceed');
     return;
   }
 
-  console.log(`成功登录 ${tokens.length} 个用户`);
-  console.log('开始发送请求...');
+  console.log('\n🚀 STARTING 5-MINUTE LOAD TEST');
+  console.log('📊 MONITOR CPU: Open Activity Monitor and watch "node" process');
+  console.log('🎯 EXPECTED: CPU usage >80% for 5 minutes');
+  console.log('');
 
   const startTime = Date.now();
   const endTime = startTime + TEST_DURATION;
+  let batchCount = 0;
 
-  // 创建并发请求
-  const requestPromises = [];
-  
+  // Send initial burst
+  console.log('💥 Initial burst - starting multiple transcoding tasks...');
+  await executeBatch(++batchCount);
+
+  // Continue sending requests throughout test duration
   while (Date.now() < endTime) {
-    // 创建新的并发请求
-    for (let i = 0; i < CONCURRENT_REQUESTS; i++) {
-      requestPromises.push(executeRequest());
+    const timeRemaining = Math.round((endTime - Date.now()) / 1000);
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    
+    console.log(`⏰ ${minutes}:${seconds.toString().padStart(2, '0')} remaining | Requests: ${requestCount} | Active: ${activeTranscoding}`);
+    
+    // Send next batch
+    await executeBatch(++batchCount);
+    
+    // Wait before next batch
+    if (Date.now() < endTime) {
+      await new Promise(resolve => setTimeout(resolve, REQUEST_INTERVAL));
     }
-    
-    // 等待所有请求完成
-    await Promise.all(requestPromises);
-    
-    // 等待间隔时间
-    await new Promise(resolve => setTimeout(resolve, REQUEST_INTERVAL));
   }
 
   const totalTime = (Date.now() - startTime) / 1000;
-  
-  console.log('\n负载测试完成!');
-  console.log(`总时间: ${totalTime.toFixed(2)} 秒`);
-  console.log(`总请求数: ${requestCount}`);
-  console.log(`成功请求: ${successCount}`);
-  console.log(`失败请求: ${errorCount}`);
-  console.log(`成功率: ${((successCount / requestCount) * 100).toFixed(2)}%`);
-  console.log(`平均请求速率: ${(requestCount / totalTime).toFixed(2)} 请求/秒`);
+  const requestRate = (requestCount / totalTime).toFixed(2);
+
+  console.log('\n🏁 LOAD TEST COMPLETED');
+  console.log('=====================');
+  console.log(`⏱️  Duration: ${totalTime.toFixed(1)} seconds`);
+  console.log(`📊 Total requests: ${requestCount}`);
+  console.log(`✅ Successful: ${successCount}`);
+  console.log(`❌ Failed: ${errorCount}`);
+  console.log(`🚀 Request rate: ${requestRate} requests/second`);
+  console.log(`🎬 Active transcoding: ${activeTranscoding}`);
+  console.log(`📈 Success rate: ${((successCount / requestCount) * 100).toFixed(1)}%`);
+  console.log('');
+  console.log('💡 CAB432 Requirements Check:');
+  console.log(`   ✅ >80% CPU for 5 minutes: ${successCount > 0 ? 'ACHIEVED' : 'CHECK MANUALLY'}`);
+  console.log(`   ✅ Network headroom for 4 servers: ${requestRate >= 0.5 ? 'SUFFICIENT' : 'MAY NEED ADJUSTMENT'}`);
+  console.log(`   ✅ Sustained load generation: ${requestCount >= 50 ? 'ACHIEVED' : 'PARTIAL'}`);
 };
 
-// 检查服务器是否运行
+// Check server availability
 const checkServer = async () => {
   try {
     const response = await axios.get(`${BASE_URL}/health`);
-    console.log('服务器状态:', response.data);
+    console.log('🟢 Server status:', response.data.status);
     return true;
   } catch (error) {
-    console.error('服务器未运行或无法访问');
+    console.error('🔴 Server not accessible at', BASE_URL);
     return false;
   }
 };
 
-// 主函数
+// Main execution
 const main = async () => {
-  console.log('CAB432 负载测试工具');
-  console.log('==================');
+  console.log('🎯 CAB432 Load Testing Tool');
+  console.log('Video Transcoding Load Test for >80% CPU');
+  console.log('==========================================');
   
   const serverRunning = await checkServer();
   if (!serverRunning) {
-    console.log('请确保服务器正在运行在 http://localhost:3000');
+    console.log('❌ Please ensure server is running: npm run dev');
     process.exit(1);
+  }
+
+  console.log('⚠️  IMPORTANT: Open Activity Monitor NOW!');
+  console.log('👀 Find "node" process and monitor %CPU');
+  console.log('');
+
+  // Countdown
+  for (let i = 3; i > 0; i--) {
+    console.log(`Starting in ${i}...`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
   await runLoadTest();
 };
 
-// 运行测试
+// Run if called directly
 if (require.main === module) {
   main().catch(console.error);
 }

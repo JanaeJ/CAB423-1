@@ -4,108 +4,151 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 
-// 导入路由
+// Import routes
 const authRoutes = require('./routes/auth');
-const imageRoutes = require('./routes/images');
+const videoRoutes = require('./routes/videos');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 速率限制
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15分钟
-  max: 100, // 限制每个IP 15分钟内最多100个请求
-  message: {
-    error: '请求过于频繁，请稍后再试'
-  }
-});
+// Rate limiting - disabled for load testing
+const limiter = (req, res, next) => next(); // Completely disable rate limiting for testing
 
-// 中间件
-app.use(helmet()); // 安全头
-app.use(cors()); // 跨域支持
-app.use(morgan('combined')); // 日志记录
-app.use(express.json({ limit: '10mb' })); // JSON解析
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // URL编码解析
-app.use(limiter); // 速率限制
+// Middleware
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
 
-// 静态文件服务
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(morgan('combined'));
+
+// Increase payload limits for large video files (5GB)
+app.use(express.json({ limit: '5gb' }));
+app.use(express.urlencoded({ extended: true, limit: '5gb' }));
+app.use(limiter);
+
+// Static files
 app.use(express.static('public'));
 
-// 基础路由
+// Basic routes
 app.get('/', (req, res) => {
   res.json({
-    message: '欢迎使用CAB432 REST API - 图像处理服务',
+    message: 'Welcome to CAB432 REST API - Ultra CPU-Intensive Video Processing Service',
     version: '1.0.0',
-    status: '运行中',
+    status: 'running',
     features: [
-      '用户认证 (JWT)',
-      '图像上传和处理',
-      'CPU密集型任务',
-      '任务状态跟踪',
-      '负载测试支持'
+      'User Authentication (JWT)',
+      'Large Video Upload (up to 5GB)',
+      'Ultra CPU-Intensive Video Transcoding',
+      'Multiple Quality Presets',
+      'H.264 and H.265 Encoding',
+      'Task Status Tracking',
+      'Load Testing Support'
     ],
+    limits: {
+      maxFileSize: '5GB',
+      supportedFormats: ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm'],
+      qualityPresets: ['fast', 'medium', 'slow (ultra CPU-intensive)'],
+      resolutions: ['480p', '720p', '1080p', '4K']
+    },
     endpoints: {
       auth: '/api/auth',
-      images: '/api/images',
+      videos: '/api/videos',
       health: '/health'
-    }
+    },
+    testAccounts: {
+      admin: { username: 'admin', password: 'admin123' },
+      user: { username: 'user1', password: 'user123' }
+    },
+    cpuIntensiveNote: 'Use "slow" quality preset for maximum CPU utilization'
   });
 });
 
-// 健康检查端点
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
-    cpu: process.cpuUsage()
+    cpu: process.cpuUsage(),
+    systemLimits: {
+      maxFileSize: '5GB',
+      payloadLimit: '5GB'
+    }
   });
 });
 
-// API路由
+// API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/images', imageRoutes);
+app.use('/api/videos', videoRoutes);
 
-// 404处理
+
+// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: '路由未找到',
+    error: 'Route not found',
     path: req.originalUrl,
     availableEndpoints: [
       'GET /',
       'GET /health',
       'POST /api/auth/login',
       'GET /api/auth/me',
-      'POST /api/images/upload',
-      'GET /api/images/tasks',
-      'GET /api/images/task/:taskId',
-      'GET /api/images/image/:taskId'
+      'POST /api/videos/upload (supports up to 5GB)',
+      'GET /api/videos/tasks',
+      'GET /api/videos/task/:taskId',
+      'GET /api/videos/video/:taskId',
+      'GET /api/videos/videos (admin only)'
     ]
   });
 });
 
-// 错误处理中间件
+// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('错误:', err);
+  console.error('Error:', err);
   
   if (err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        error: 'File too large',
+        message: 'Maximum file size is 5GB',
+        maxSize: '5GB'
+      });
+    }
     return res.status(400).json({
-      error: '文件上传错误',
+      error: 'File upload error',
       message: err.message
     });
   }
   
+  if (err.name === 'PayloadTooLargeError') {
+    return res.status(413).json({
+      error: 'Payload too large',
+      message: 'Request payload exceeds the 5GB limit',
+      maxSize: '5GB'
+    });
+  }
+  
   res.status(500).json({
-    error: '服务器内部错误',
+    error: 'Internal server error',
     message: err.message
   });
 });
 
-// 启动服务器
+// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 服务器运行在端口 ${PORT}`);
-  console.log(`📖 API文档: http://localhost:${PORT}`);
-  console.log(`💚 健康检查: http://localhost:${PORT}/health`);
-  console.log(`🔐 测试用户: admin/admin123, user1/user123`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📖 API Documentation: http://localhost:${PORT}`);
+  console.log(`💚 Health Check: http://localhost:${PORT}/health`);
+  console.log(`🔐 Test Users: admin/admin123, user1/user123`);
+  console.log(`🎬 Ultra CPU-Intensive Video Processing Service Ready`);
+  console.log(`📁 Maximum file size: 5GB`);
+  console.log(`⚡ Use "slow" quality preset for maximum CPU utilization`);
+  console.log(`🔥 CPU monitoring: Use Activity Monitor to watch node process`);
 });

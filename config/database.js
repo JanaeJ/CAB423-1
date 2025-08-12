@@ -1,4 +1,4 @@
-// 内存数据库配置
+// In-memory database configuration
 const users = [
   {
     id: 1,
@@ -19,10 +19,10 @@ const users = [
 ];
 
 const tasks = [];
-const processedImages = [];
+const processedVideos = [];
 
 module.exports = {
   users,
   tasks,
-  processedImages
+  processedVideos
 };

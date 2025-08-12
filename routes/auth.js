@@ -1,3 +1,4 @@
+//jjn
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -6,30 +7,30 @@ const { JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
 
-// 用户登录
+// User login
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ error: '用户名和密码不能为空' });
+      return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    // 查找用户
+    // Find user
     const user = users.find(u => u.username === username);
     if (!user) {
-      return res.status(401).json({ error: '用户名或密码错误' });
+      return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    // 验证密码 (使用硬编码密码进行演示)
+    // Validate password (using hardcoded passwords for demo)
     const isValidPassword = (username === 'admin' && password === 'admin123') ||
                            (username === 'user1' && password === 'user123');
 
     if (!isValidPassword) {
-      return res.status(401).json({ error: '用户名或密码错误' });
+      return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    // 生成JWT令牌
+    // Generate JWT token
     const token = jwt.sign(
       { 
         id: user.id, 
@@ -42,7 +43,7 @@ router.post('/login', async (req, res) => {
     );
 
     res.json({
-      message: '登录成功',
+      message: 'Login successful',
       token,
       user: {
         id: user.id,
@@ -52,14 +53,14 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('登录错误:', error);
-    res.status(500).json({ error: '服务器内部错误' });
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// 获取当前用户信息
+// Get current user info
 router.get('/me', (req, res) => {
-  // 这个端点需要认证中间件
+  // This endpoint requires authentication middleware
   res.json({
     user: req.user
   });

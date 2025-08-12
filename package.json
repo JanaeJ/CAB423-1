@@ -1,7 +1,7 @@
 {
   "name": "cab432-rest-api",
   "version": "1.0.0",
-  "description": "CAB432 REST API项目 - 图像处理服务",
+  "description": "CAB432 REST API Project - Video Processing Service",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -14,26 +14,26 @@
     "rest",
     "api",
     "cab432",
-    "image-processing",
+    "video-processing",
     "cpu-intensive"
   ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "helmet": "^7.1.0",
-    "morgan": "^1.10.0",
-    "jsonwebtoken": "^9.0.2",
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "fluent-ffmpeg": "^2.1.3",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
-    "sharp": "^0.33.0",
-    "uuid": "^9.0.1",
-    "express-rate-limit": "^7.1.5"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
     "axios": "^1.6.0",
-    "form-data": "^4.0.0"
+    "form-data": "^4.0.0",
+    "nodemon": "^3.0.2"
   }
 }
