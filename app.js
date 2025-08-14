@@ -60,7 +60,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Simple authentication endpoint
+// JWT Authentication endpoint
 app.post('/auth/login', (req, res) => {
   const { username, password } = req.body;
   
@@ -78,6 +78,7 @@ app.post('/auth/login', (req, res) => {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
   
+  // Generate JWT token
   const token = jwt.sign(
     { id: user.id, username, role: user.role },
     JWT_SECRET,
@@ -90,27 +91,6 @@ app.post('/auth/login', (req, res) => {
     user: { id: user.id, username, role: user.role }
   });
 });
-  
-  // Hardcoded users for demo
-  const users = {
-    'admin': { id: 1, password: 'admin123', role: 'admin' },
-    'user1': { id: 2, password: 'user123', role: 'user' }
-  };
-  
-  const user = users[username];
-  if (!user || user.password !== password) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-  
-  // Simple token (in production, use JWT)
-  const token = Buffer.from(`${user.id}:${username}:${user.role}`).toString('base64');
-  
-  res.json({
-    message: 'Login successful',
-    token,
-    user: { id: user.id, username, role: user.role }
-  });
-
 
 // Job management routes
 app.use('/jobs', jobsRouter);
@@ -147,5 +127,4 @@ app.listen(PORT, () => {
   console.log(`🚀 CAB432 Video Job API running on port ${PORT}`);
   console.log(`📖 API Documentation: http://localhost:${PORT}`);
   console.log(`💚 Health Check: http://localhost:${PORT}/health`);
-
 });
