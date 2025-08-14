@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CAB432 Video Processing Service</title>
+    <title>CAB432 Enhanced Video Processing Service</title>
     <style>
         * {
             margin: 0;
@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
@@ -74,7 +74,7 @@
             color: #555;
         }
 
-        input, select {
+        input, select, textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
@@ -83,7 +83,7 @@
             transition: border-color 0.3s;
         }
 
-        input:focus, select:focus {
+        input:focus, select:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -98,6 +98,8 @@
             font-size: 16px;
             font-weight: bold;
             transition: transform 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
         }
 
         .btn:hover {
@@ -108,6 +110,19 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: #dc3545;
         }
 
         .status {
@@ -135,32 +150,6 @@
             border: 1px solid #bee5eb;
         }
 
-        .task-list {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .task-item {
-            background: white;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .task-item.completed {
-            border-left-color: #28a745;
-        }
-
-        .task-item.failed {
-            border-left-color: #dc3545;
-        }
-
-        .task-item.processing {
-            border-left-color: #ffc107;
-        }
-
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -186,19 +175,159 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .task-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .task-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .task-item.completed {
+            border-left-color: #28a745;
+        }
+
+        .task-item.failed {
+            border-left-color: #dc3545;
+        }
+
+        .task-item.processing {
+            border-left-color: #ffc107;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            gap: 10px;
+        }
+
+        .pagination-info {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+
+        .search-controls {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .api-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #0066cc;
+        }
+
+        .api-info h4 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+
+        .api-info code {
+            background: #f1f1f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            background: #f8f9ff;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #f0fff0;
+        }
+
+        .file-list {
+            margin: 20px 0;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+
+        .cpu-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #f39c12;
+        }
+
+        .cpu-warning h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎬 CAB432 Video Processing Service</h1>
-            <p>CPU-Intensive Video Transcoding REST API</p>
+            <h1>CAB432 Enhanced Video Processing Service</h1>
+            <p>Enterprise REST API with CPU-Intensive Video Processing</p>
         </div>
 
         <div class="content">
             <!-- Login Section -->
             <div class="section" id="loginSection">
-                <h2>🔐 User Login</h2>
+                <h2>User Authentication</h2>
                 <div class="form-group">
                     <label for="username">Username:</label>
                     <input type="text" id="username" placeholder="admin or user1">
@@ -213,76 +342,154 @@
 
             <!-- Video Upload Section -->
             <div class="section hidden" id="uploadSection">
-                <h2>📤 Video Upload and Transcoding</h2>
+                <h2>CPU-Intensive Video Processing</h2>
                 
-                <div class="form-group">
-                    <label for="videoFiles">Select Video Files (Multiple files supported):</label>
-                    <input type="file" id="videoFiles" accept="video/*" multiple>
-                    <p style="margin-top: 5px; color: #666; font-size: 14px;">
-                        💡 <strong>Tip:</strong> Select 10-50 video files for sustained CPU load! 
-                        Hold Cmd (Mac) or Ctrl (Windows) to select multiple files.
-                    </p>
-                </div>
-                
-                <div class="grid">
-                    <div>
-                        <h3>Resolution</h3>
-                        <div class="form-group">
-                            <label for="resolution">Target Resolution:</label>
-                            <select id="resolution">
-                                <option value="480p">480p (854x480)</option>
-                                <option value="720p">720p (1280x720)</option>
-                                <option value="1080p" selected>1080p (1920x1080) - Recommended</option>
-                                <option value="4k">4K (3840x2160) - Ultra CPU Intensive</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <h3>Quality Settings</h3>
-                        <div class="form-group">
-                            <label for="quality">Encoding Quality:</label>
-                            <select id="quality">
-                                <option value="fast">Fast (Lower CPU)</option>
-                                <option value="medium">Medium (Balanced)</option>
-                                <option value="slow" selected>Slow (ULTRA CPU Intensive) - Recommended</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <h3>Codec</h3>
-                        <div class="form-group">
-                            <label for="codec">Video Codec:</label>
-                            <select id="codec">
-                                <option value="h264">H.264 (Standard)</option>
-                                <option value="h265" selected>H.265 (More CPU-intensive) - Recommended</option>
-                            </select>
-                        </div>
-                    </div>
+                <div class="cpu-warning">
+                    <h4>🔥 For Maximum CPU Load Testing:</h4>
+                    <p>1. <strong>Select multiple video files</strong> (any format/size)</p>
+                    <p>2. <strong>Use "Slow" quality setting</strong> for ultra CPU-intensive processing</p>
+                    <p>3. <strong>Open Activity Monitor</strong> before uploading</p>
+                    <p>4. <strong>Watch node process CPU</strong> - should reach 80%+ for 5+ minutes</p>
+                    <p>5. <strong>Upload 5-10 videos simultaneously</strong> to simulate server load</p>
                 </div>
 
-                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
-                    <h4>🔥 For Maximum CPU Load (5+ minutes):</h4>
-                    <p>1. <strong>Select 20-50 video files</strong> (any size)</p>
-                    <p>2. <strong>Use: 1080p + Slow + H.265</strong> (selected above)</p>
-                    <p>3. <strong>Open Activity Monitor</strong> before clicking upload</p>
-                    <p>4. <strong>Watch node process CPU</strong> - should reach 80%+ for 5+ minutes</p>
+                <!-- File Upload Area -->
+                <div class="upload-area" onclick="document.getElementById('videoFiles').click()" 
+                     ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <h3>📁 Drop video files here or click to select</h3>
+                    <p>Supports: MP4, AVI, MOV, MKV, WebM (up to 1GB each)</p>
+                    <input type="file" id="videoFiles" accept="video/*" multiple style="display: none;" onchange="handleFileSelect(event)">
+                </div>
+
+                <div id="fileList" class="file-list"></div>
+
+                <!-- Processing Settings -->
+                <div class="grid">
+                    <div>
+                        <label for="resolution">Target Resolution:</label>
+                        <select id="resolution">
+                            <option value="480p">480p (854x480)</option>
+                            <option value="720p">720p (1280x720)</option>
+                            <option value="1080p" selected>1080p (1920x1080) - Recommended</option>
+                            <option value="4k">4K (3840x2160) - Ultra CPU Intensive</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="quality">Processing Quality:</label>
+                        <select id="quality">
+                            <option value="fast">Fast (Lower CPU usage)</option>
+                            <option value="medium">Medium (Balanced)</option>
+                            <option value="slow" selected>Slow (ULTRA CPU Intensive) - Recommended</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="codec">Video Codec:</label>
+                        <select id="codec">
+                            <option value="h264">H.264 (Standard)</option>
+                            <option value="h265" selected>H.265 (More CPU-intensive) - Recommended</option>
+                        </select>
+                    </div>
                 </div>
 
                 <button class="btn" onclick="uploadAllVideos()" id="uploadBtn" style="font-size: 18px; padding: 15px 40px;">
-                    🚀 Upload and Process All Videos
+                    🚀 Start CPU-Intensive Processing
                 </button>
-                
+                <button class="btn btn-secondary" onclick="clearFiles()">Clear Files</button>
+
                 <div id="uploadStatus"></div>
-                <div id="batchProgress"></div>
+                <div id="uploadProgress"></div>
             </div>
 
-            <!-- Task List -->
-            <div class="section hidden" id="tasksSection">
-                <h2>📋 Processing Tasks</h2>
-                <button class="btn" onclick="loadTasks()">Refresh Task List</button>
-                <div id="tasksList" class="task-list"></div>
+            <!-- Enhanced Job Management Section -->
+            <div class="section hidden" id="jobsSection">
+                <h2>Enhanced Job Management</h2>
+                
+                <!-- API Features Info -->
+                <div class="api-info">
+                    <h4>🚀 Enhanced REST API Features:</h4>
+                    <p><code>Version Control</code> - API versioning with headers (API-Version: v1)</p>
+                    <p><code>Pagination</code> - Page-based results with metadata</p>
+                    <p><code>Filtering</code> - Filter by status, quality, resolution, codec</p>
+                    <p><code>Searching</code> - Search jobs by title with partial matching</p>
+                    <p><code>Sorting</code> - Sort by any field with ascending/descending order</p>
+                    <p><code>HATEOAS</code> - Hypermedia links for navigation and actions</p>
+                </div>
+
+                <!-- Search and Filters -->
+                <div class="search-controls">
+                    <div class="search-input">
+                        <label for="searchTitle">Search by Title:</label>
+                        <input type="text" id="searchTitle" placeholder="Search jobs..." onkeyup="handleSearch(event)">
+                    </div>
+                    <div>
+                        <label for="filterStatus">Status:</label>
+                        <select id="filterStatus" onchange="loadJobs()">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="completed">Completed</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filterQuality">Quality:</label>
+                        <select id="filterQuality" onchange="loadJobs()">
+                            <option value="">All Qualities</option>
+                            <option value="fast">Fast</option>
+                            <option value="medium">Medium</option>
+                            <option value="slow">Slow</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filterResolution">Resolution:</label>
+                        <select id="filterResolution" onchange="loadJobs()">
+                            <option value="">All Resolutions</option>
+                            <option value="480p">480p</option>
+                            <option value="720p">720p</option>
+                            <option value="1080p">1080p</option>
+                            <option value="4k">4K</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="sortBy">Sort By:</label>
+                        <select id="sortBy" onchange="loadJobs()">
+                            <option value="created_at">Created Date</option>
+                            <option value="title">Title</option>
+                            <option value="status">Status</option>
+                            <option value="progress">Progress</option>
+                            <option value="cpu_time_seconds">CPU Time</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="sortOrder">Order:</label>
+                        <select id="sortOrder" onchange="loadJobs()">
+                            <option value="desc">Descending</option>
+                            <option value="asc">Ascending</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-secondary" onclick="loadJobs()">🔄 Refresh Jobs</button>
+                
+                <!-- Pagination Controls -->
+                <div class="pagination" id="paginationTop" style="display: none;">
+                    <button class="btn btn-small" onclick="changePage('prev')" id="prevBtn">Previous</button>
+                    <span id="pageInfo">Page 1 of 1</span>
+                    <button class="btn btn-small" onclick="changePage('next')" id="nextBtn">Next</button>
+                </div>
+
+                <!-- Jobs List -->
+                <div id="jobsList" class="task-list"></div>
+
+                <!-- Pagination Info -->
+                <div class="pagination-info" id="paginationInfo" style="display: none;"></div>
+
+                <!-- Bottom Pagination -->
+                <div class="pagination" id="paginationBottom" style="display: none;">
+                    <button class="btn btn-small" onclick="changePage('prev')" id="prevBtn2">Previous</button>
+                    <span id="pageInfo2">Page 1 of 1</span>
+                    <button class="btn btn-small" onclick="changePage('next')" id="nextBtn2">Next</button>
+                </div>
             </div>
         </div>
     </div>
@@ -290,6 +497,9 @@
     <script>
         let currentToken = null;
         let currentUser = null;
+        let currentPage = 1;
+        let totalPages = 1;
+        let selectedFiles = [];
 
         // Login function
         async function login() {
@@ -303,10 +513,11 @@
             }
 
             try {
-                const response = await fetch('/api/auth/login', {
+                const response = await fetch('/auth/login', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'API-Version': 'v1'
                     },
                     body: JSON.stringify({ username, password })
                 });
@@ -316,17 +527,14 @@
                 if (response.ok) {
                     currentToken = data.token;
                     currentUser = data.user;
-                    showStatus(statusDiv, `Login successful! Welcome ${data.user.username}`, 'success');
+                    showStatus(statusDiv, `Login successful! Welcome ${data.user.username} (${data.user.role})`, 'success');
                     
                     // Show other sections
                     document.getElementById('uploadSection').classList.remove('hidden');
-                    document.getElementById('tasksSection').classList.remove('hidden');
+                    document.getElementById('jobsSection').classList.remove('hidden');
                     
-                    // Load task list
-                    loadTasks();
-                    
-                    // Load task list
-                    loadTasks();
+                    // Load jobs
+                    loadJobs();
                 } else {
                     showStatus(statusDiv, data.error || 'Login failed', 'error');
                 }
@@ -335,63 +543,111 @@
             }
         }
 
-        // Upload all selected videos
-        async function uploadAllVideos() {
-            const fileInput = document.getElementById('videoFiles');
-            const statusDiv = document.getElementById('uploadStatus');
-            const progressDiv = document.getElementById('batchProgress');
-            const uploadBtn = document.getElementById('uploadBtn');
+        // File handling functions
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            selectedFiles = [...selectedFiles, ...files];
+            updateFileList();
+        }
 
-            if (!fileInput.files || fileInput.files.length === 0) {
-                showStatus(statusDiv, 'Please select at least one video file', 'error');
+        function handleDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = Array.from(event.dataTransfer.files);
+            selectedFiles = [...selectedFiles, ...files];
+            updateFileList();
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '';
                 return;
             }
 
-            const files = Array.from(fileInput.files);
-            const totalFiles = files.length;
-            
-            if (totalFiles < 5) {
-                if (!confirm(`You selected ${totalFiles} files. For sustained CPU load, 10+ files are recommended. Continue anyway?`)) {
-                    return;
-                }
+            fileList.innerHTML = `
+                <h4>Selected Files (${selectedFiles.length}):</h4>
+                ${selectedFiles.map((file, index) => `
+                    <div class="file-item">
+                        <span><strong>${file.name}</strong> (${(file.size / (1024*1024)).toFixed(2)}MB)</span>
+                        <button class="btn btn-small btn-danger" onclick="removeFile(${index})">Remove</button>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        function clearFiles() {
+            selectedFiles = [];
+            document.getElementById('videoFiles').value = '';
+            updateFileList();
+        }
+
+        // Upload all videos with CPU-intensive processing
+        async function uploadAllVideos() {
+            const statusDiv = document.getElementById('uploadStatus');
+            const progressDiv = document.getElementById('uploadProgress');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (selectedFiles.length === 0) {
+                showStatus(statusDiv, 'Please select at least one video file', 'error');
+                return;
             }
 
             uploadBtn.disabled = true;
             uploadBtn.innerHTML = '<span class="loading"></span> Processing...';
 
-            showStatus(statusDiv, `🚀 Starting batch upload of ${totalFiles} videos with CPU-intensive settings...`, 'info');
-            
-            // Get settings
             const resolution = document.getElementById('resolution').value;
             const quality = document.getElementById('quality').value;
             const codec = document.getElementById('codec').value;
+
+            showStatus(statusDiv, `🚀 Starting CPU-intensive processing of ${selectedFiles.length} videos...`, 'info');
             
             let completed = 0;
             let failed = 0;
             const startTime = Date.now();
-            
+
             // Function to upload single video
             const uploadSingleVideo = async (file, index) => {
                 try {
-                    console.log(`Starting upload ${index + 1}/${totalFiles}: ${file.name}`);
+                    console.log(`Starting upload ${index + 1}/${selectedFiles.length}: ${file.name}`);
                     
                     const formData = new FormData();
                     formData.append('video', file);
+                    formData.append('title', `CPU Processing: ${file.name}`);
+                    formData.append('description', `CPU-intensive processing with ${quality} quality, ${resolution} resolution, ${codec} codec`);
                     formData.append('resolution', resolution);
                     formData.append('quality', quality);
                     formData.append('codec', codec);
 
-                    const response = await fetch('/api/videos/upload', {
+                    const response = await fetch('/jobs/upload', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${currentToken}`
+                            'Authorization': `Bearer ${currentToken}`,
+                            'API-Version': 'v1'
                         },
                         body: formData
                     });
 
                     if (response.ok) {
                         completed++;
-                        console.log(`✅ Upload ${index + 1} completed: ${file.name}`);
+                        const data = await response.json();
+                        console.log(`✅ Upload ${index + 1} completed: ${file.name} (Job ID: ${data.data.job_id})`);
                     } else {
                         failed++;
                         const error = await response.json();
@@ -403,131 +659,296 @@
                 }
                 
                 // Update progress
-                const progress = ((completed + failed) / totalFiles * 100).toFixed(1);
+                const progress = ((completed + failed) / selectedFiles.length * 100).toFixed(1);
                 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
                 
                 progressDiv.innerHTML = `
                     <div class="status info">
-                        📊 Progress: ${completed + failed}/${totalFiles} (${progress}%)<br>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${progress}%"></div>
+                        </div>
+                        📊 Progress: ${completed + failed}/${selectedFiles.length} (${progress}%)<br>
                         ✅ Successful: ${completed} | ❌ Failed: ${failed}<br>
                         ⏱️ Elapsed: ${elapsed}s<br>
-                        🎬 <strong>${completed} videos are now transcoding - Check Activity Monitor!</strong>
+                        🎬 <strong>${completed} videos are now processing - Check Activity Monitor!</strong><br>
+                        🔥 <strong>CPU should be at 80%+ for 5+ minutes per video</strong>
                     </div>
                 `;
             };
 
-            // Start uploading videos with slight delays to prevent overwhelming
-            console.log(`🎬 Starting batch upload of ${totalFiles} videos...`);
+            // Start uploading videos with slight delays
+            console.log(`🎬 Starting batch upload of ${selectedFiles.length} videos...`);
             console.log(`⚙️ Settings: ${resolution}, ${quality} quality, ${codec} codec`);
             console.log(`💡 Open Activity Monitor and watch the node process CPU usage!`);
             
-            const uploadPromises = files.map((file, index) => {
-                // Stagger uploads slightly to prevent server overload
+            const uploadPromises = selectedFiles.map((file, index) => {
                 return new Promise(resolve => {
                     setTimeout(async () => {
                         await uploadSingleVideo(file, index);
                         resolve();
-                    }, index * 500); // 500ms delay between each upload start
+                    }, index * 1000); // 1 second delay between uploads
                 });
             });
 
-            // Wait for all uploads to complete
             await Promise.all(uploadPromises);
 
             const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
             
             uploadBtn.disabled = false;
-            uploadBtn.innerHTML = '🚀 Upload and Process All Videos';
-            fileInput.value = '';
+            uploadBtn.innerHTML = '🚀 Start CPU-Intensive Processing';
 
             if (completed > 0) {
-                showStatus(statusDiv, `🎉 Batch upload completed! ${completed} videos are transcoding (${failed} failed)`, 'success');
+                showStatus(statusDiv, `🎉 Batch upload completed! ${completed} videos are processing (${failed} failed)`, 'success');
                 progressDiv.innerHTML = `
                     <div class="status success">
                         🏁 <strong>Batch Upload Complete!</strong><br>
-                        ✅ ${completed} videos successfully started transcoding<br>
+                        ✅ ${completed} videos successfully started CPU-intensive processing<br>
                         ❌ ${failed} uploads failed<br>
-                        ⏱️ Total time: ${totalTime}s<br>
-                        🔥 <strong>Videos will continue transcoding for 5+ minutes!</strong><br>
-                        📊 <strong>Check Activity Monitor - CPU should be >80%</strong>
+                        ⏱️ Total upload time: ${totalTime}s<br>
+                        🔥 <strong>Videos will process for 5-30 minutes each (${quality} quality)</strong><br>
+                        📊 <strong>Check Activity Monitor - CPU should be >80%</strong><br>
+                        🎯 <strong>Each video uses ultra CPU-intensive FFmpeg settings</strong>
                     </div>
                 `;
                 
-                // Refresh task list
-                setTimeout(loadTasks, 2000);
+                // Clear selected files and refresh jobs
+                clearFiles();
+                setTimeout(() => loadJobs(), 2000);
             } else {
                 showStatus(statusDiv, `❌ All uploads failed. Check console for details.`, 'error');
             }
         }
 
-        // Load task list
-        async function loadTasks() {
-            const tasksList = document.getElementById('tasksList');
-            
+        // Enhanced load jobs with pagination, filtering, sorting
+        async function loadJobs(page = 1) {
+            const jobsList = document.getElementById('jobsList');
+            jobsList.innerHTML = '<div class="loading"></div> Loading jobs...';
+
+            const params = new URLSearchParams({
+                page: page,
+                limit: 8,
+                sort: document.getElementById('sortBy').value,
+                order: document.getElementById('sortOrder').value
+            });
+
+            // Add filters
+            const status = document.getElementById('filterStatus').value;
+            const quality = document.getElementById('filterQuality').value;
+            const resolution = document.getElementById('filterResolution').value;
+            const title = document.getElementById('searchTitle').value;
+
+            if (status) params.append('status', status);
+            if (quality) params.append('quality', quality);
+            if (resolution) params.append('resolution', resolution);
+            if (title.trim()) params.append('title', title.trim());
+
             try {
-                const response = await fetch('/api/videos/tasks', {
+                const response = await fetch(`/jobs?${params}`, {
                     headers: {
-                        'Authorization': `Bearer ${currentToken}`
+                        'Authorization': `Bearer ${currentToken}`,
+                        'API-Version': 'v1'
                     }
                 });
 
-                const tasks = await response.json();
+                const data = await response.json();
 
                 if (response.ok) {
-                    if (tasks.length === 0) {
-                        tasksList.innerHTML = '<p>No tasks found</p>';
-                    } else {
-                        tasksList.innerHTML = tasks.map(task => `
-                            <div class="task-item ${task.status}">
-                                <h4>${task.originalName}</h4>
-                                <p>Status: ${getStatusText(task.status)}</p>
-                                <p>Created: ${new Date(task.createdAt).toLocaleString()}</p>
-                                ${task.completedAt ? `<p>Completed: ${new Date(task.completedAt).toLocaleString()}</p>` : ''}
-                                ${task.error ? `<p>Error: ${task.error}</p>` : ''}
-                                ${task.status === 'completed' ? `<button class="btn" onclick="downloadVideo('${task.id}')">Download</button>` : ''}
-                            </div>
-                        `).join('');
-                    }
+                    displayJobs(data);
+                    updatePagination(data.pagination);
                 } else {
-                    tasksList.innerHTML = '<p>Failed to load tasks</p>';
+                    jobsList.innerHTML = `<p>Error loading jobs: ${data.error}</p>`;
                 }
             } catch (error) {
-                tasksList.innerHTML = '<p>Network error</p>';
+                jobsList.innerHTML = '<p>Network error loading jobs</p>';
             }
         }
 
-        // Download video
-        function downloadVideo(taskId) {
-            const url = `/api/videos/video/${taskId}`;
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `processed_${taskId}.mp4`;
-            a.style.display = 'none';
+        // Display jobs with enhanced information
+        function displayJobs(data) {
+            const jobsList = document.getElementById('jobsList');
             
-            // Add auth header
-            fetch(url, {
-                headers: {
-                    'Authorization': `Bearer ${currentToken}`
-                }
-            }).then(response => response.blob())
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                a.href = url;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            });
+            if (data.data.length === 0) {
+                jobsList.innerHTML = '<p>No jobs found matching your criteria.</p>';
+                return;
+            }
+
+            jobsList.innerHTML = data.data.map(job => `
+                <div class="task-item ${job.status}">
+                    <h4>${job.title}</h4>
+                    <p><strong>Status:</strong> ${job.status.toUpperCase()}</p>
+                    <p><strong>Description:</strong> ${job.description || 'No description'}</p>
+                    <p><strong>Input File:</strong> ${job.input_filename || 'No file'}</p>
+                    <p><strong>Settings:</strong> ${job.resolution} • ${job.quality} quality • ${job.codec} codec</p>
+                    <p><strong>Progress:</strong> ${job.progress}%</p>
+                    <p><strong>CPU Time:</strong> ${job.cpu_time_seconds}s</p>
+                    <p><strong>Created:</strong> ${new Date(job.created_at).toLocaleString()}</p>
+                    ${job.started_at ? `<p><strong>Started:</strong> ${new Date(job.started_at).toLocaleString()}</p>` : ''}
+                    ${job.completed_at ? `<p><strong>Completed:</strong> ${new Date(job.completed_at).toLocaleString()}</p>` : ''}
+                    ${job.error_message ? `<p><strong>Error:</strong> ${job.error_message}</p>` : ''}
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-small" onclick="viewJob(${job.id})">View Details</button>
+                        ${job.status === 'completed' && job.output_filename ? 
+                            `<button class="btn btn-small" onclick="downloadVideo(${job.id})">Download Video</button>` : ''
+                        }
+                        <button class="btn btn-small btn-danger" onclick="deleteJob(${job.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Show API response metadata
+            if (data.meta) {
+                const apiInfo = document.createElement('div');
+                apiInfo.className = 'api-info';
+                apiInfo.innerHTML = `
+                    <h4>📡 API Response Metadata:</h4>
+                    <p><code>API Version:</code> ${data.meta.api_version}</p>
+                    <p><code>Timestamp:</code> ${data.meta.timestamp}</p>
+                    <p><code>Request ID:</code> ${data.meta.request_id}</p>
+                    ${data.links ? `<p><code>HATEOAS Links:</code> ${Object.keys(data.links).join(', ')}</p>` : ''}
+                    ${data.filters_applied ? `<p><code>Active Filters:</code> ${Object.entries(data.filters_applied).filter(([k,v]) => v).map(([k,v]) => `${k}=${v}`).join(', ') || 'None'}</p>` : ''}
+                    ${data.sorting ? `<p><code>Sorting:</code> ${data.sorting.field} ${data.sorting.order}</p>` : ''}
+                `;
+                jobsList.appendChild(apiInfo);
+            }
         }
 
-        // Get status text
-        function getStatusText(status) {
-            const statusMap = {
-                'processing': 'Processing',
-                'completed': 'Completed',
-                'failed': 'Failed'
-            };
-            return statusMap[status] || status;
+        // Update pagination controls
+        function updatePagination(pagination) {
+            if (!pagination) return;
+
+            currentPage = pagination.current_page;
+            totalPages = pagination.total_pages;
+
+            const infoText = `Showing ${pagination.per_page} items per page • Total: ${pagination.total_items} items`;
+            document.getElementById('paginationInfo').innerHTML = infoText;
+            document.getElementById('paginationInfo').style.display = 'block';
+
+            const pageText = `Page ${currentPage} of ${totalPages}`;
+            document.getElementById('pageInfo').textContent = pageText;
+            document.getElementById('pageInfo2').textContent = pageText;
+
+            const prevDisabled = !pagination.has_prev_page;
+            const nextDisabled = !pagination.has_next_page;
+
+            document.getElementById('prevBtn').disabled = prevDisabled;
+            document.getElementById('nextBtn').disabled = nextDisabled;
+            document.getElementById('prevBtn2').disabled = prevDisabled;
+            document.getElementById('nextBtn2').disabled = nextDisabled;
+
+            const showPagination = totalPages > 1;
+            document.getElementById('paginationTop').style.display = showPagination ? 'flex' : 'none';
+            document.getElementById('paginationBottom').style.display = showPagination ? 'flex' : 'none';
+        }
+
+        // Change page
+        function changePage(direction) {
+            if (direction === 'prev' && currentPage > 1) {
+                loadJobs(currentPage - 1);
+            } else if (direction === 'next' && currentPage < totalPages) {
+                loadJobs(currentPage + 1);
+            }
+        }
+
+        // Handle search input
+        function handleSearch(event) {
+            if (event.key === 'Enter') {
+                currentPage = 1;
+                loadJobs(1);
+            }
+        }
+
+        // View job details with HATEOAS links
+        async function viewJob(jobId) {
+            try {
+                const response = await fetch(`/jobs/${jobId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'API-Version': 'v1'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let details = `Job Details:\n\n`;
+                    details += `ID: ${data.data.id}\n`;
+                    details += `Title: ${data.data.title}\n`;
+                    details += `Status: ${data.data.status}\n`;
+                    details += `Input File: ${data.data.input_filename || 'None'}\n`;
+                    details += `Settings: ${data.data.resolution} • ${data.data.quality} • ${data.data.codec}\n`;
+                    details += `Progress: ${data.data.progress}%\n`;
+                    details += `CPU Time: ${data.data.cpu_time_seconds}s\n`;
+                    details += `Created: ${new Date(data.data.created_at).toLocaleString()}\n`;
+                    
+                    if (data.links) {
+                        details += `\nHATEOAS Links:\n`;
+                        Object.entries(data.links).forEach(([key, url]) => {
+                            details += `${key}: ${url}\n`;
+                        });
+                    }
+                    
+                    alert(details);
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert('Network error loading job details');
+            }
+        }
+
+        // Download processed video
+        async function downloadVideo(jobId) {
+            try {
+                const response = await fetch(`/jobs/${jobId}/download`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'API-Version': 'v1'
+                    }
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `processed_video_${jobId}.mp4`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    const error = await response.json();
+                    alert(`Download failed: ${error.error}`);
+                }
+            } catch (error) {
+                alert('Network error downloading video');
+            }
+        }
+
+        // Delete job
+        async function deleteJob(jobId) {
+            if (!confirm('Are you sure you want to delete this job and its associated files?')) return;
+
+            try {
+                const response = await fetch(`/jobs/${jobId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'API-Version': 'v1'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Job deleted successfully');
+                    loadJobs(currentPage);
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert('Network error deleting job');
+            }
         }
 
         // Show status message
@@ -535,15 +956,17 @@
             element.innerHTML = `<div class="status ${type}">${message}</div>`;
             setTimeout(() => {
                 element.innerHTML = '';
-            }, 5000);
+            }, 8000);
         }
 
-        // Check server status on page load
+        // Initialize
         window.addEventListener('load', async () => {
             try {
                 const response = await fetch('/health');
                 if (response.ok) {
-                    console.log('Server running normally');
+                    const data = await response.json();
+                    console.log('Server running:', data.service, data.version);
+                    console.log('Features enabled:', data.features_enabled);
                 }
             } catch (error) {
                 console.error('Cannot connect to server');
@@ -552,4 +975,3 @@
     </script>
 </body>
 </html>
-

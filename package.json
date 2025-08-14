@@ -7,15 +7,24 @@
     "start": "node app.js",
     "dev": "nodemon app.js"
   },
-  "keywords": ["cab432", "rest-api", "video-processing", "cpu-intensive"],
+  "keywords": [
+    "cab432",
+    "rest-api",
+    "video-processing",
+    "cpu-intensive"
+  ],
   "author": "Junning Jia (n11789450)",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "mariadb": "^3.2.2",
+    "axios": "^1.11.0",
     "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "fluent-ffmpeg": "^2.1.3",
     "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mariadb": "^3.2.2",
     "morgan": "^1.10.0",
-    "jsonwebtoken": "^9.0.2"
+    "multer": "^2.0.2",
+    "uuid": "^11.1.0"
   }
 }

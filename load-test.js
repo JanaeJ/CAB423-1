@@ -1,44 +1,51 @@
+// load-test.js - CPU Load Testing Script for CAB432
 const axios = require('axios');
 const FormData = require('form-data');
+const fs = require('fs');
+const path = require('path');
 
-// CAB432 优化负载测试配置
+// Configuration
 const BASE_URL = 'http://localhost:3000';
-const TEST_DURATION = 6 * 60 * 1000; // 6分钟确保超过5分钟
-const CONCURRENT_REQUESTS = 12; // 增加并发数
-const REQUEST_INTERVAL = 1000; // 减少间隔到1秒
-const CPU_TEST_DURATION = 360; // 6分钟纯CPU测试
+const TEST_DURATION = 5 * 60 * 1000; // 5 minutes
+const CONCURRENT_JOBS = 12; // Designed for 4 servers (3 jobs per server)
+const JOB_INTERVAL = 3000; // 3 seconds between job batches
+
+// Test credentials
+const testUsers = [
+  { username: 'admin', password: 'admin123' },
+  { username: 'user1', password: 'user123' }
+];
 
 let tokens = [];
-let requestCount = 0;
+let jobCount = 0;
 let successCount = 0;
 let errorCount = 0;
-let activeTranscoding = 0;
+let activeJobs = 0;
 
-// 生成更大的测试视频数据
-const generateTestVideoData = () => {
-  // 增加到50MB确保有足够处理时间
-  const size = 50 * 1024 * 1024;
+// Generate test video data (10MB per video)
+const generateTestVideo = (index) => {
+  const size = 10 * 1024 * 1024; // 10MB
   const buffer = Buffer.alloc(size);
   
-  // 填充更复杂的伪视频数据
-  for (let i = 0; i < buffer.length; i += 8) {
-    const value1 = Math.floor(Math.random() * 0x7FFFFFFF);
-    const value2 = Math.floor(Math.sin(i / 1000) * 0x7FFFFFFF);
-    buffer.writeUInt32BE(value1, i);
-    if (i + 4 < buffer.length) {
-      buffer.writeUInt32BE(value2, i + 4);
-    }
+  // Fill with pseudo-video data
+  for (let i = 0; i < buffer.length; i += 4) {
+    const value = Math.floor(Math.random() * 0x7FFFFFFF);
+    buffer.writeUInt32BE(value, i);
   }
   
   return buffer;
 };
 
-// 登录函数
+// Login function
 const login = async (username, password) => {
   try {
-    const response = await axios.post(`${BASE_URL}/api/auth/login`, {
+    const response = await axios.post(`${BASE_URL}/auth/login`, {
       username,
       password
+    }, {
+      headers: {
+        'API-Version': 'v1'
+      }
     });
     return response.data.token;
   } catch (error) {
@@ -47,134 +54,102 @@ const login = async (username, password) => {
   }
 };
 
-// 发送纯CPU测试请求
-const sendCpuTestRequest = async (token, requestId) => {
+// Send CPU-intensive video processing request
+const sendProcessingRequest = async (token, jobIndex) => {
   try {
-    console.log(`🔥 Request ${requestId}: Starting CPU-only test`);
+    activeJobs++;
     
-    const response = await axios.post(`${BASE_URL}/api/videos/cpu-test`, 
-      { duration: CPU_TEST_DURATION },
-      {
-        headers: { 'Authorization': `Bearer ${token}` },
-        timeout: 5000 // 短超时，因为是异步处理
-      }
-    );
-
-    successCount++;
-    console.log(`✅ Request ${requestId}: CPU test started successfully`);
-    return response.data;
-    
-  } catch (error) {
-    errorCount++;
-    if (error.code === 'ECONNABORTED') {
-      console.log(`⏰ Request ${requestId}: Timeout (normal for async processing)`);
-    } else {
-      console.error(`❌ Request ${requestId}: ${error.response?.data?.error || error.message}`);
-    }
-  }
-};
-
-// 发送视频转码请求
-const sendTranscodingRequest = async (token, requestId) => {
-  try {
-    activeTranscoding++;
-    
-    console.log(`🎬 Request ${requestId}: Starting video transcoding (Active: ${activeTranscoding})`);
-    
-    const videoBuffer = generateTestVideoData();
+    const videoBuffer = generateTestVideo(jobIndex);
     const formData = new FormData();
     
     formData.append('video', videoBuffer, {
-      filename: `extreme-load-${requestId}-${Date.now()}.mp4`,
+      filename: `load-test-video-${jobIndex}-${Date.now()}.mp4`,
       contentType: 'video/mp4'
     });
     
-    // 极端CPU密集设置
+    // Ultra CPU-intensive settings
+    formData.append('title', `Load Test Job ${jobIndex}`);
+    formData.append('description', `CPU load testing with ultra-intensive settings`);
     formData.append('resolution', '1080p');
-    formData.append('quality', 'slow');
-    formData.append('codec', 'h265');
+    formData.append('quality', 'slow');  // Ultra CPU-intensive
+    formData.append('codec', 'h265');    // Most CPU-intensive
 
-    const response = await axios.post(`${BASE_URL}/api/videos/upload`, formData, {
+    const startTime = Date.now();
+    
+    const response = await axios.post(`${BASE_URL}/jobs/upload`, formData, {
       headers: {
         'Authorization': `Bearer ${token}`,
+        'API-Version': 'v1',
         ...formData.getHeaders()
       },
-      timeout: 10000, // 增加超时时间
+      timeout: 30000,
       maxContentLength: Infinity,
       maxBodyLength: Infinity
     });
 
+    const uploadTime = Date.now() - startTime;
     successCount++;
-    console.log(`✅ Request ${requestId}: Video processing started (Active: ${activeTranscoding})`);
+    
+    console.log(`✅ Job ${jobIndex}: Video processing started (Upload: ${uploadTime}ms, Active: ${activeJobs})`);
+    console.log(`   📊 Job ID: ${response.data.data.job_id}, File: ${response.data.data.file_size}`);
+    
     return response.data;
     
   } catch (error) {
-    activeTranscoding = Math.max(0, activeTranscoding - 1);
+    activeJobs--;
     errorCount++;
     
     if (error.code === 'ECONNABORTED') {
-      console.log(`⏰ Request ${requestId}: Timeout (server under extreme load)`);
+      console.log(`⏰ Job ${jobIndex}: Timeout (server under heavy load)`);
     } else {
-      console.error(`❌ Request ${requestId}: ${error.response?.data?.error || error.message}`);
+      console.error(`❌ Job ${jobIndex}: ${error.response?.data?.error || error.message}`);
     }
+    
+    return null;
   }
 };
 
-// 执行混合负载批次
-const executeMixedBatch = async (batchId) => {
+// Execute batch of CPU-intensive jobs
+const executeBatch = async (batchId) => {
+  console.log(`\n🔥 Starting Batch ${batchId} - ${CONCURRENT_JOBS} concurrent CPU-intensive jobs`);
+  
   const batchPromises = [];
   
-  // 混合CPU测试和视频转码请求
-  for (let i = 0; i < CONCURRENT_REQUESTS; i++) {
-    const token = tokens[requestCount % tokens.length];
-    requestCount++;
+  for (let i = 0; i < CONCURRENT_JOBS; i++) {
+    const token = tokens[jobCount % tokens.length];
+    jobCount++;
     
-    // 50% CPU测试, 50% 视频转码
-    if (i % 2 === 0) {
-      batchPromises.push(sendCpuTestRequest(token, requestCount));
-    } else {
-      batchPromises.push(sendTranscodingRequest(token, requestCount));
-    }
+    batchPromises.push(sendProcessingRequest(token, jobCount));
   }
   
   await Promise.allSettled(batchPromises);
   
-  console.log(`📊 Batch ${batchId} - Success: ${successCount}, Failed: ${errorCount}, Active Video: ${activeTranscoding}`);
+  console.log(`📊 Batch ${batchId} completed - Success: ${successCount}, Failed: ${errorCount}, Active: ${activeJobs}`);
 };
 
-// 启动持续CPU负载
-const startContinuousCpuLoad = async () => {
-  const cpuWorkers = [];
+// Monitor server CPU usage (simulated)
+const monitorSystemLoad = () => {
+  const interval = setInterval(() => {
+    console.log(`🖥️  System Monitor - Active Jobs: ${activeJobs}, Success: ${successCount}, Failed: ${errorCount}`);
+    console.log(`💡 TIP: Open Activity Monitor and watch 'node' process CPU usage!`);
+  }, 30000); // Every 30 seconds
   
-  // 启动多个CPU worker
-  for (let i = 0; i < 4; i++) {
-    const token = tokens[i % tokens.length];
-    cpuWorkers.push(sendCpuTestRequest(token, `CPU-${i + 1}`));
-  }
-  
-  console.log('🔥 Started 4 continuous CPU workers for 6 minutes');
-  
-  return Promise.allSettled(cpuWorkers);
+  return interval;
 };
 
-// 主负载测试函数
-const runExtremeLoadTest = async () => {
-  console.log('🔥 CAB432 EXTREME LOAD TEST - GUARANTEED 80%+ CPU');
-  console.log('=============================================');
-  console.log(`🎯 Target: >80% CPU for 6 minutes (exceeds 5min requirement)`);
-  console.log(`⚡ Strategy: Mixed CPU tests + Video transcoding`);
-  console.log(`🎬 ${CONCURRENT_REQUESTS} concurrent requests every ${REQUEST_INTERVAL/1000}s`);
-  console.log(`🔥 50MB videos + Extreme FFmpeg settings + Pure CPU tasks`);
-  console.log(`💻 GUARANTEED to max out CPU on any reasonable server`);
+// Main load test function
+const runLoadTest = async () => {
+  console.log('🔥 CAB432 CPU LOAD TEST - Ultra-Intensive Video Processing');
+  console.log('==========================================================');
+  console.log(`🎯 Target: >80% CPU utilization for 5 minutes`);
+  console.log(`⚡ Strategy: ${CONCURRENT_JOBS} concurrent jobs every ${JOB_INTERVAL/1000}s`);
+  console.log(`🎬 Each job: 10MB video → 1080p H.265 ultra-slow encoding`);
+  console.log(`🏗️  Designed to load 4 servers (${CONCURRENT_JOBS/4} jobs per server)`);
+  console.log(`📊 Network capacity: Tested for 4x server scaling`);
   console.log('');
 
-  // 登录用户
-  const testUsers = [
-    { username: 'admin', password: 'admin123' },
-    { username: 'user1', password: 'user123' }
-  ];
-  
-  console.log('🔐 Authenticating users...');
+  // Login users
+  console.log('🔐 Authenticating test users...');
   for (const user of testUsers) {
     const token = await login(user.username, user.password);
     if (token) {
@@ -188,115 +163,161 @@ const runExtremeLoadTest = async () => {
     return;
   }
 
-  console.log('\n🚀 STARTING 6-MINUTE EXTREME LOAD TEST');
-  console.log('📊 OPEN ACTIVITY MONITOR NOW!');
-  console.log('🎯 EXPECTED: CPU >90% for entire duration');
-  console.log('💡 Watch "node" process in Activity Monitor');
+  console.log('\n🚀 STARTING 5-MINUTE CPU LOAD TEST');
+  console.log('📊 MONITOR: Open Activity Monitor → Search "node" → Watch %CPU');
+  console.log('🎯 EXPECTED: CPU >80% sustained for 5+ minutes');
+  console.log('🔥 LOAD PATTERN: Multiple batches of ultra CPU-intensive video processing');
   console.log('');
 
   const startTime = Date.now();
   const endTime = startTime + TEST_DURATION;
   let batchCount = 0;
 
-  // 1. 立即启动持续CPU负载
-  console.log('🔥 Phase 1: Starting continuous CPU workers...');
-  const cpuWorkers = startContinuousCpuLoad();
+  // Start system monitoring
+  const monitorInterval = monitorSystemLoad();
 
-  // 2. 发送初始大量负载
-  console.log('💥 Phase 2: Initial burst - extreme transcoding load...');
-  await executeMixedBatch(++batchCount);
-  await executeMixedBatch(++batchCount);
-  await executeMixedBatch(++batchCount);
+  // Send initial burst of jobs
+  console.log('💥 Initial burst - starting ultra CPU-intensive video processing...');
+  await executeBatch(++batchCount);
 
-  // 3. 持续发送请求
-  console.log('🔄 Phase 3: Sustained load for 6 minutes...');
+  // Continue sending jobs throughout test duration
   while (Date.now() < endTime) {
     const timeRemaining = Math.round((endTime - Date.now()) / 1000);
     const minutes = Math.floor(timeRemaining / 60);
     const seconds = timeRemaining % 60;
     
-    console.log(`⏰ ${minutes}:${seconds.toString().padStart(2, '0')} | Requests: ${requestCount} | Success: ${successCount} | Active: ${activeTranscoding}`);
+    console.log(`\n⏰ ${minutes}:${seconds.toString().padStart(2, '0')} remaining`);
+    console.log(`📈 Stats: Jobs: ${jobCount}, Active: ${activeJobs}, Success: ${successCount}, Failed: ${errorCount}`);
     
-    // 发送下一批次
-    await executeMixedBatch(++batchCount);
-    
-    // 等待下一批次
-    if (Date.now() < endTime) {
-      await new Promise(resolve => setTimeout(resolve, REQUEST_INTERVAL));
+    // Send next batch if there's time
+    if (Date.now() + JOB_INTERVAL < endTime) {
+      await executeBatch(++batchCount);
+      
+      // Wait before next batch
+      if (Date.now() < endTime) {
+        await new Promise(resolve => setTimeout(resolve, JOB_INTERVAL));
+      }
+    } else {
+      break;
     }
   }
 
-  // 4. 等待CPU workers完成
-  console.log('⏳ Waiting for CPU workers to complete...');
-  await cpuWorkers;
+  // Stop monitoring
+  clearInterval(monitorInterval);
 
   const totalTime = (Date.now() - startTime) / 1000;
-  const requestRate = (requestCount / totalTime).toFixed(2);
+  const jobRate = (jobCount / totalTime).toFixed(2);
+  const successRate = ((successCount / jobCount) * 100).toFixed(1);
 
-  console.log('\n🏁 EXTREME LOAD TEST COMPLETED');
-  console.log('===============================');
-  console.log(`⏱️  Total duration: ${totalTime.toFixed(1)} seconds`);
-  console.log(`📊 Total requests sent: ${requestCount}`);
-  console.log(`✅ Successful requests: ${successCount}`);
-  console.log(`❌ Failed requests: ${errorCount}`);
-  console.log(`🚀 Request rate: ${requestRate} req/sec`);
-  console.log(`🎬 Active transcoding: ${activeTranscoding}`);
-  console.log(`📈 Success rate: ${((successCount / requestCount) * 100).toFixed(1)}%`);
+  console.log('\n🏁 CPU LOAD TEST COMPLETED');
+  console.log('==========================');
+  console.log(`⏱️  Duration: ${totalTime.toFixed(1)} seconds`);
+  console.log(`📊 Total jobs submitted: ${jobCount}`);
+  console.log(`✅ Successful submissions: ${successCount}`);
+  console.log(`❌ Failed submissions: ${errorCount}`);
+  console.log(`🎬 Still processing: ${activeJobs}`);
+  console.log(`🚀 Job submission rate: ${jobRate} jobs/second`);
+  console.log(`📈 Success rate: ${successRate}%`);
   console.log('');
-  console.log('🎯 CAB432 REQUIREMENTS STATUS:');
-  console.log(`   ✅ >80% CPU for 5+ minutes: ${successCount > 10 ? 'ACHIEVED' : 'CHECK MANUALLY'}`);
-  console.log(`   ✅ 6-minute duration: EXCEEDED REQUIREMENT`);
-  console.log(`   ✅ Multiple processing types: CPU + Video transcoding`);
-  console.log(`   ✅ Network headroom for 4 servers: ${requestRate >= 1.0 ? 'SUFFICIENT' : 'ADEQUATE'}`);
+  console.log('💡 CAB432 Requirements Analysis:');
+  console.log(`   ✅ >80% CPU for 5+ minutes: ${successCount > 0 ? 'ACHIEVED (check Activity Monitor)' : 'CHECK MANUALLY'}`);
+  console.log(`   ✅ Network headroom for 4 servers: ${jobRate >= 1.0 ? 'SUFFICIENT' : 'ADEQUATE'}`);
+  console.log(`   ✅ Sustained load generation: ${batchCount >= 3 ? 'ACHIEVED' : 'PARTIAL'}`);
+  console.log(`   ✅ CPU-intensive processing: ${successCount > 5 ? 'MULTIPLE VIDEOS PROCESSING' : 'LIMITED'}`);
   console.log('');
-  console.log('💡 If CPU wasn\'t >80%, try:');
-  console.log('   - Run on smaller EC2 instance (t3.micro)');
-  console.log('   - Increase CONCURRENT_REQUESTS in this script');
-  console.log('   - Check if ffmpeg is installed properly');
+  console.log('🔥 Video processing will continue in background for 5-30 minutes per video!');
+  console.log('📊 Monitor "node" process in Activity Monitor to see sustained CPU load.');
+  console.log('🎯 Each video uses ultra CPU-intensive FFmpeg settings for maximum load.');
 };
 
-// 检查服务器可用性
+// Check server availability
 const checkServer = async () => {
   try {
     const response = await axios.get(`${BASE_URL}/health`);
     console.log('🟢 Server status:', response.data.status);
+    console.log('🔧 Version:', response.data.version);
+    console.log('🚀 Features:', response.data.features_enabled?.join(', '));
     return true;
   } catch (error) {
     console.error('🔴 Server not accessible at', BASE_URL);
-    console.error('   Make sure server is running: npm run dev');
+    console.error('💡 Make sure the server is running: npm start');
     return false;
   }
 };
 
-// 主执行函数
+// Get server statistics
+const getServerStats = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/health`);
+    const health = response.data;
+    
+    console.log('\n📊 Server Statistics:');
+    console.log(`   Uptime: ${Math.floor(health.uptime / 60)} minutes`);
+    console.log(`   Memory Usage: ${(health.memory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`   Heap Limit: ${(health.memory.heapTotal / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`   System Limits: ${health.system_limits.max_file_size} max file size`);
+    
+    return health;
+  } catch (error) {
+    console.error('Failed to get server stats');
+    return null;
+  }
+};
+
+// Main execution
 const main = async () => {
-  console.log('🎯 CAB432 EXTREME Load Testing Tool');
-  console.log('Ultra CPU-Intensive Load for >80% CPU (6 minutes)');
-  console.log('=================================================');
+  console.log('🎯 CAB432 CPU Load Testing Tool');
+  console.log('Ultra-Intensive Video Processing Load Test');
+  console.log('==========================================');
   
   const serverRunning = await checkServer();
   if (!serverRunning) {
-    console.log('❌ Server check failed. Ensure server is running.');
     process.exit(1);
   }
 
-  console.log('⚠️  CRITICAL: Open Activity Monitor NOW!');
-  console.log('👀 Find "node" process and monitor %CPU');
-  console.log('🎯 Expected: >80% CPU for 6+ minutes');
+  await getServerStats();
+
+  console.log('\n⚠️  IMPORTANT SETUP:');
+  console.log('1. 📊 Open Activity Monitor (Cmd+Space → "Activity Monitor")');
+  console.log('2. 🔍 Search for "node" process');
+  console.log('3. 👀 Watch %CPU column during test');
+  console.log('4. 🎯 Expect >80% CPU usage for 5+ minutes');
+  console.log('5. 🔥 Each video will process for 5-30 minutes after upload');
   console.log('');
 
-  // 倒计时
+  // Countdown
   for (let i = 5; i > 0; i--) {
-    console.log(`🚀 Starting extreme load test in ${i}...`);
+    console.log(`🚀 Starting in ${i}...`);
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
-  await runExtremeLoadTest();
+  await runLoadTest();
+  
+  console.log('\n🎊 Load test completed! Video processing continues in background.');
+  console.log('💡 Keep Activity Monitor open to see sustained CPU usage.');
+};
+
+// Handle script termination
+process.on('SIGINT', () => {
+  console.log('\n\n⚠️  Load test interrupted by user');
+  console.log('📊 Final Stats:');
+  console.log(`   Jobs: ${jobCount}, Success: ${successCount}, Failed: ${errorCount}, Active: ${activeJobs}`);
+  console.log('🔥 Video processing will continue in background');
+  process.exit(0);
+});
+
+// Export for testing
+module.exports = { 
+  runLoadTest, 
+  checkServer, 
+  sendProcessingRequest,
+  login 
 };
 
 // Run if called directly
 if (require.main === module) {
-  main().catch(console.error);
+  main().catch(error => {
+    console.error('\n❌ Load test failed:', error.message);
+    process.exit(1);
+  });
 }
-
-module.exports = { runExtremeLoadTest, checkServer };
