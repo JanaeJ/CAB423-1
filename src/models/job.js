@@ -1,5 +1,6 @@
 const pool = require('../db');
 
+// Get all jobs
 exports.getAll = async (userId = null) => {
   const conn = await pool.getConnection();
   let query = 'SELECT * FROM video_jobs';
@@ -16,6 +17,7 @@ exports.getAll = async (userId = null) => {
   return rows;
 };
 
+// Get job by ID
 exports.getById = async (id, userId = null) => {
   const conn = await pool.getConnection();
   let query = 'SELECT * FROM video_jobs WHERE id = ?';
@@ -31,33 +33,60 @@ exports.getById = async (id, userId = null) => {
   return rows[0];
 };
 
+// Create new job
 exports.create = async (jobData) => {
   const conn = await pool.getConnection();
-  const { userId, originalName, inputPath, resolution, quality, codec } = jobData;
+  const { 
+    userId = 1, 
+    title, 
+    description = '', 
+    inputFilename = 'test_video.mp4',
+    resolution = '720p', 
+    quality = 'medium', 
+    codec = 'h264' 
+  } = jobData;
   
   const result = await conn.query(`
-    INSERT INTO video_jobs (user_id, original_name, input_path, resolution, quality, codec, status) 
-    VALUES (?, ?, ?, ?, ?, ?, 'pending')
-  `, [userId, originalName, inputPath, resolution, quality, codec]);
+    INSERT INTO video_jobs (
+      user_id, title, description, input_filename, 
+      resolution, quality, codec, status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+  `, [userId, title, description, inputFilename, resolution, quality, codec]);
   
   conn.release();
   return { 
     id: Number(result.insertId), 
-    ...jobData, 
+    userId,
+    title,
+    description,
+    inputFilename,
     status: 'pending',
-    progress: 0 
+    progress: 0,
+    resolution,
+    quality,
+    codec,
+    createdAt: new Date()
   };
 };
 
+// Update job
 exports.update = async (id, updateData) => {
   const conn = await pool.getConnection();
   const fields = [];
   const values = [];
   
+  // Build dynamic update fields
   Object.keys(updateData).forEach(key => {
-    fields.push(`${key} = ?`);
-    values.push(updateData[key]);
+    if (updateData[key] !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(updateData[key]);
+    }
   });
+  
+  if (fields.length === 0) {
+    conn.release();
+    return { updated: false };
+  }
   
   values.push(id);
   
@@ -70,6 +99,7 @@ exports.update = async (id, updateData) => {
   return { updated: result.affectedRows > 0 };
 };
 
+// Delete job
 exports.remove = async (id, userId = null) => {
   const conn = await pool.getConnection();
   let query = 'DELETE FROM video_jobs WHERE id = ?';
