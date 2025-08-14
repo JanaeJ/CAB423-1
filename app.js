@@ -1,3 +1,5 @@
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'cab432-secret-key';
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -66,6 +68,29 @@ app.post('/auth/login', (req, res) => {
     return res.status(400).json({ error: 'Username and password required' });
   }
   
+  const users = {
+    'admin': { id: 1, password: 'admin123', role: 'admin' },
+    'user1': { id: 2, password: 'user123', role: 'user' }
+  };
+  
+  const user = users[username];
+  if (!user || user.password !== password) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  
+  const token = jwt.sign(
+    { id: user.id, username, role: user.role },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+  
+  res.json({
+    message: 'Login successful',
+    token,
+    user: { id: user.id, username, role: user.role }
+  });
+});
+  
   // Hardcoded users for demo
   const users = {
     'admin': { id: 1, password: 'admin123', role: 'admin' },
@@ -85,7 +110,7 @@ app.post('/auth/login', (req, res) => {
     token,
     user: { id: user.id, username, role: user.role }
   });
-});
+
 
 // Job management routes
 app.use('/jobs', jobsRouter);

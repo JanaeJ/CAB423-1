@@ -1,3 +1,5 @@
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'cab432-secret-key';
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/jobs');
@@ -9,17 +11,12 @@ const authenticate = (req, res, next) => {
   if (auth && auth.startsWith('Bearer ')) {
     const token = auth.substring(7);
     try {
-      const decoded = Buffer.from(token, 'base64').toString();
-      const [id, username, role] = decoded.split(':');
-      req.user = { 
-        id: parseInt(id), 
-        username, 
-        role 
-      };
+      const decoded = jwt.verify(token, JWT_SECRET);
+      req.user = decoded;
     } catch (e) {
       return res.status(401).json({ 
         success: false,
-        error: 'Invalid authentication token' 
+        error: 'Invalid JWT token' 
       });
     }
   }
