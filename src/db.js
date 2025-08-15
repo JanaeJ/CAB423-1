@@ -1,3 +1,4 @@
+BigInt.prototype.toJSON = function() { return Number(this) }
 const mariadb = require('mariadb');
 
 const pool = mariadb.createPool({

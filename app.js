@@ -19,9 +19,9 @@ app.use(cors({
 }));
 app.use(morgan('combined'));
 
-// Increase payload limits for large video files (1GB)
-app.use(express.json({ limit: '1gb' }));
-app.use(express.urlencoded({ extended: true, limit: '1gb' }));
+// Increase payload limits for large video files
+app.use(express.json({ limit: '20gb' }));
+app.use(express.urlencoded({ extended: true, limit: '20gb' }));
 
 // Serve static files
 app.use(express.static('public'));
@@ -113,7 +113,7 @@ app.get('/health', (req, res) => {
       'file_upload'
     ],
     system_limits: {
-      max_file_size: '1GB',
+      max_file_size: '20GB',
       max_concurrent_jobs: 'unlimited',
       supported_formats: ['mp4', 'avi', 'mov', 'mkv', 'webm'],
       supported_codecs: ['h264', 'h265'],

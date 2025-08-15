@@ -1,4 +1,3 @@
-// src/routes/jobs.js - Integrated: Advanced API + Real Video Processing
 const express = require('express');
 const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
@@ -8,7 +7,7 @@ const fs = require('fs').promises;
 const router = express.Router();
 const pool = require('../db');
 
-// Configure multer for video uploads (up to 1GB)
+// Configure multer for video uploads
 const storage = multer.diskStorage({
   destination: async (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../../uploads');
@@ -23,7 +22,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB limit
+  limits: { fileSize: 1024 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
       cb(null, true);
@@ -103,33 +102,33 @@ const processVideoFile = (inputPath, outputPath, options = {}) => {
     // Ultra CPU-intensive settings based on quality
     if (quality === 'slow') {
       ffmpegCommand = ffmpegCommand.outputOptions([
-        '-preset veryslow',        // Slowest preset
-        '-crf 15',                // Very high quality
-        '-bf 16',                 // Max B-frames
-        '-refs 16',               // Max reference frames
-        '-subme 11',              // Max subpixel motion estimation
-        '-me_range 32',           // Max motion search range
-        '-g 300',                 // Large GOP
-        '-keyint_min 30',         // Min keyframe interval
-        '-sc_threshold 40',       // Scene change threshold
-        '-qcomp 0.6',            // Quantizer curve compression
-        '-qmin 1',               // Min quantizer (very high quality)
-        '-qmax 51',              // Max quantizer
-        '-qdiff 4',              // Adjacent frame quantizer difference
-        '-trellis 2',            // Trellis quantization
-        '-partitions +parti8x8+parti4x4+partp8x8+partb8x8',
-        '-direct-pred 3',        // Direct prediction mode
-        '-flags +loop',          // Loop filter
-        '-deblock 1:0:0',        // Deblocking filter
-        '-analyse 0x3:0x113',    // Analysis options
-        '-no-fast-pskip',        // Disable fast P-skip
-        '-no-dct-decimate',      // Disable DCT decimation
+        '-preset slow',        // Slowest preset
+        '-crf 18',                // Very high quality
+        // '-bf 16',                 // Max B-frames
+        // '-refs 16',               // Max reference frames
+        // '-subme 11',              // Max subpixel motion estimation
+        // '-me_range 32',           // Max motion search range
+        // '-g 300',                 // Large GOP
+        // '-keyint_min 30',         // Min keyframe interval
+        // '-sc_threshold 40',       // Scene change threshold
+        // '-qcomp 0.6',            // Quantizer curve compression
+        // '-qmin 1',               // Min quantizer (very high quality)
+        // '-qmax 51',              // Max quantizer
+        // '-qdiff 4',              // Adjacent frame quantizer difference
+        // '-trellis 2',            // Trellis quantization
+        // '-partitions +parti8x8+parti4x4+partp8x8+partb8x8',
+        // '-direct-pred 3',        // Direct prediction mode
+        // '-flags +loop',          // Loop filter
+        // '-deblock 1:0:0',        // Deblocking filter
+        // '-analyse 0x3:0x113',    // Analysis options
+        // '-no-fast-pskip',        // Disable fast P-skip
+        // '-no-dct-decimate',      // Disable DCT decimation
         '-threads 1'             // Force single thread for max CPU usage
       ]);
     } else if (quality === 'medium') {
       ffmpegCommand = ffmpegCommand.outputOptions([
-        '-preset slower',
-        '-crf 18',
+        '-preset medium',
+        '-crf 23',
         '-bf 8',
         '-refs 8',
         '-subme 9',
@@ -138,8 +137,8 @@ const processVideoFile = (inputPath, outputPath, options = {}) => {
       ]);
     } else {
       ffmpegCommand = ffmpegCommand.outputOptions([
-        '-preset slow',
-        '-crf 23',
+        '-preset fast',
+        '-crf 28',
         '-threads 4'
       ]);
     }
