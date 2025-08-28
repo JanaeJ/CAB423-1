@@ -7,31 +7,6 @@ const fs = require('fs').promises;
 const router = express.Router();
 const pool = require('../db');
 
-// Configure multer for video uploads
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads');
-    await fs.mkdir(uploadDir, { recursive: true });
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${uuidv4()}-${file.originalname}`;
-    cb(null, uniqueName);
-  }
-});
-
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 1024 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only video and image files are allowed'), false);
-    }
-  }
-});
-
 // Ensure directories exist
 const uploadDir = path.join(__dirname, '../../uploads');
 const processedDir = path.join(__dirname, '../../processed');
@@ -46,6 +21,29 @@ const processedDir = path.join(__dirname, '../../processed');
   }
 })();
 
+// Configure multer for video uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${uuidv4()}-${file.originalname}`;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video and image files are allowed'));
+    }
+  }
+});
+
 // API Version middleware
 const apiVersion = (req, res, next) => {
   const version = req.headers['api-version'] || req.query.version || 'v1';
@@ -58,137 +56,55 @@ const apiVersion = (req, res, next) => {
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ 
-      error: 'Access token required',
-      code: 'UNAUTHORIZED',
-      timestamp: new Date().toISOString()
-    });
-  }
-  
-  // Simplified JWT verification for demo
+
+  if (!token) return res.status(401).json({ error: 'Access token required', code: 'UNAUTHORIZED', timestamp: new Date().toISOString() });
+
   try {
     const jwt = require('jsonwebtoken');
     const JWT_SECRET = process.env.JWT_SECRET || 'cab432-secret-key';
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    req.user = jwt.verify(token, JWT_SECRET);
     next();
-  } catch (error) {
-    return res.status(403).json({
-      error: 'Invalid token',
-      code: 'FORBIDDEN',
-      timestamp: new Date().toISOString()
-    });
+  } catch {
+    return res.status(403).json({ error: 'Invalid token', code: 'FORBIDDEN', timestamp: new Date().toISOString() });
   }
 };
 
 // Ultra CPU-intensive video processing function
 const processVideoFile = (inputPath, outputPath, options = {}) => {
   return new Promise((resolve, reject) => {
-    const {
-      resolution = '720p',
-      quality = 'medium',
-      codec = 'h264'
-    } = options;
-
-    console.log(`Starting ULTRA CPU-intensive video processing: ${inputPath}`);
-    
+    const { resolution = '720p', quality = 'medium', codec = 'h264' } = options;
     let ffmpegCommand = ffmpeg(inputPath)
       .videoCodec(codec === 'h264' ? 'libx264' : 'libx265')
       .audioCodec('aac')
       .audioBitrate(128);
 
-    // Ultra CPU-intensive settings based on quality
-    if (quality === 'slow') {
-      ffmpegCommand = ffmpegCommand.outputOptions([
-        '-preset slow',        // Slowest preset
-        '-crf 18',                // Very high quality
-        // '-bf 16',                 // Max B-frames
-        // '-refs 16',               // Max reference frames
-        // '-subme 11',              // Max subpixel motion estimation
-        // '-me_range 32',           // Max motion search range
-        // '-g 300',                 // Large GOP
-        // '-keyint_min 30',         // Min keyframe interval
-        // '-sc_threshold 40',       // Scene change threshold
-        // '-qcomp 0.6',            // Quantizer curve compression
-        // '-qmin 1',               // Min quantizer (very high quality)
-        // '-qmax 51',              // Max quantizer
-        // '-qdiff 4',              // Adjacent frame quantizer difference
-        // '-trellis 2',            // Trellis quantization
-        // '-partitions +parti8x8+parti4x4+partp8x8+partb8x8',
-        // '-direct-pred 3',        // Direct prediction mode
-        // '-flags +loop',          // Loop filter
-        // '-deblock 1:0:0',        // Deblocking filter
-        // '-analyse 0x3:0x113',    // Analysis options
-        // '-no-fast-pskip',        // Disable fast P-skip
-        // '-no-dct-decimate',      // Disable DCT decimation
-        '-threads 1'             // Force single thread for max CPU usage
-      ]);
-    } else if (quality === 'medium') {
-      ffmpegCommand = ffmpegCommand.outputOptions([
-        '-preset medium',
-        '-crf 23',
-        '-bf 8',
-        '-refs 8',
-        '-subme 9',
-        '-me_range 16',
-        '-threads 2'
-      ]);
-    } else {
-      ffmpegCommand = ffmpegCommand.outputOptions([
-        '-preset fast',
-        '-crf 28',
-        '-threads 4'
-      ]);
-    }
-
-    // Set resolution
-    const resolutionMap = {
-      '480p': '854x480',
-      '720p': '1280x720',
-      '1080p': '1920x1080',
-      '4k': '3840x2160'
+    // CPU-intensive settings
+    const presets = {
+      slow: ['-preset slow', '-crf 18', '-threads 1'],
+      medium: ['-preset medium', '-crf 23', '-threads 2'],
+      fast: ['-preset fast', '-crf 28', '-threads 4']
     };
-    
-    if (resolutionMap[resolution]) {
-      ffmpegCommand = ffmpegCommand.size(resolutionMap[resolution]);
-    }
+    ffmpegCommand = ffmpegCommand.outputOptions(presets[quality] || presets['medium']);
 
-    // Add CPU-intensive video filters
-    const filters = [
-      'scale=iw:ih:flags=lanczos',  // High-quality scaling
-      'unsharp=5:5:1.0:5:5:0.0',    // Sharpening filter
-      'eq=contrast=1.1:brightness=0.05:saturation=1.1', // Color adjustment
-    ];
-    
-    if (quality === 'slow') {
-      filters.push('hqdn3d=4:3:6:4.5'); // High quality denoise
-    }
-    
+    // Resolution mapping
+    const resolutionMap = { '480p':'854x480','720p':'1280x720','1080p':'1920x1080','4k':'3840x2160' };
+    if (resolutionMap[resolution]) ffmpegCommand = ffmpegCommand.size(resolutionMap[resolution]);
+
+    // Video filters
+    const filters = ['scale=iw:ih:flags=lanczos','unsharp=5:5:1.0:5:5:0.0','eq=contrast=1.1:brightness=0.05:saturation=1.1'];
+    if (quality === 'slow') filters.push('hqdn3d=4:3:6:4.5');
     ffmpegCommand = ffmpegCommand.videoFilters(filters);
 
     const startTime = Date.now();
-    
     ffmpegCommand
       .output(outputPath)
-      .on('start', (commandLine) => {
-        console.log('FFmpeg started with ULTRA CPU-intensive settings:');
-        console.log(commandLine);
-      })
-      .on('progress', (progress) => {
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      .on('start', commandLine => console.log('FFmpeg started:', commandLine))
+      .on('progress', progress => {
+        const elapsed = Math.floor((Date.now() - startTime)/1000);
         console.log(`Processing: ${progress.percent ? progress.percent.toFixed(2) : 'N/A'}% - Elapsed: ${elapsed}s`);
       })
-      .on('end', () => {
-        const totalTime = Math.floor((Date.now() - startTime) / 1000);
-        console.log(`ULTRA CPU-intensive processing completed in ${totalTime} seconds`);
-        resolve({ success: true, outputPath, processingTime: totalTime });
-      })
-      .on('error', (err) => {
-        console.error('FFmpeg error:', err);
-        reject(err);
-      })
+      .on('end', () => resolve({ success: true, outputPath, processingTime: Math.floor((Date.now()-startTime)/1000) }))
+      .on('error', err => reject(err))
       .run();
   });
 };

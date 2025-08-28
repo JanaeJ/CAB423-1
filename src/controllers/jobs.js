@@ -194,7 +194,7 @@ async function startCpuIntensiveProcessing(jobId, jobData) {
       progress: 100,
       completed_at: new Date(),
       output_filename: `output_${jobId}_${Date.now()}.mp4`,
-      cpu_time_seconds: 300 // 5 minutes
+      cpu_time_seconds: 300 
     });
     
     console.log(`Job ${jobId} completed successfully after CPU-intensive processing`);
@@ -217,7 +217,7 @@ function performCpuIntensiveWork(jobId) {
     
     console.log(`Job ${jobId}: Starting CPU-intensive computation`);
     
-    // CPU-intensive interval - runs for 5+ minutes
+    // CPU-intensive interval
     const interval = setInterval(async () => {
       try {
         // Generate large prime numbers (CPU intensive)

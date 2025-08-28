@@ -6,10 +6,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const app = express();
 
-// Import routes
 const jobsRouter = require('./src/routes/jobs');
 
-// Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
   origin: true,
@@ -19,14 +17,11 @@ app.use(cors({
 }));
 app.use(morgan('combined'));
 
-// Increase payload limits for large video files
 app.use(express.json({ limit: '20gb' }));
 app.use(express.urlencoded({ extended: true, limit: '20gb' }));
 
-// Serve static files
 app.use(express.static('public'));
 
-// API Documentation endpoint
 app.get('/', (req, res) => {
   res.json({
     name: 'CAB432 Enhanced Video Processing REST API',
@@ -59,23 +54,59 @@ app.get('/', (req, res) => {
         'Load testing capabilities'
       ]
     },
-    endpoints: {
-      authentication: {
-        'POST /auth/login': 'User authentication with JWT'
-      },
-      job_management: {
-        'GET /jobs': 'List jobs with pagination, filtering, sorting',
-        'POST /jobs': 'Create job (metadata only)',
-        'POST /jobs/upload': 'Upload video and start CPU-intensive processing',
-        'GET /jobs/:id': 'Get job details with HATEOAS links',
-        'GET /jobs/:id/download': 'Download processed video',
-        'DELETE /jobs/:id': 'Delete job and cleanup files'
-      },
-      utilities: {
-        'GET /': 'API documentation',
-        'GET /health': 'Health check with system info'
-      }
+    // endpoints: {
+    //   authentication: {
+    //     'POST /auth/login': 'User authentication with JWT'
+    //   },
+    //   job_management: {
+    //     'GET /jobs': 'List jobs with pagination, filtering, sorting',
+    //     'POST /jobs': 'Create job (metadata only)',
+    //     'POST /jobs/upload': 'Upload video and start CPU-intensive processing',
+    //     'GET /jobs/:id': 'Get job details with HATEOAS links',
+    //     'GET /jobs/:id/download': 'Download processed video',
+    //     'DELETE /jobs/:id': 'Delete job and cleanup files'
+    //   },
+    //   utilities: {
+    //     'GET /': 'API documentation',
+    //     'GET /health': 'Health check with system info'
+    //   }
+    // },
+      endpoints: {
+    authentication: {
+      'POST /auth/login': 'User authentication with JWT'
     },
+    job_management: {
+      'GET /jobs': 'List jobs with pagination, filtering, sorting, and search',
+      'POST /jobs': 'Create job (metadata only)',
+      'POST /jobs/upload': 'Upload video and start CPU-intensive processing',
+      'GET /jobs/:id': 'Get job details with HATEOAS links',
+      'PUT /jobs/:id': 'Update job status and progress',
+      'GET /jobs/:id/download': 'Download processed video',
+      'DELETE /jobs/:id': 'Delete job and cleanup files'
+    },
+    utilities: {
+      'GET /': 'API documentation',
+      'GET /health': 'Health check with system info'
+    }
+  },
+  api_examples: {
+    pagination: '/jobs?page=1&limit=10',
+    filtering: '/jobs?status=processing&quality=slow&resolution=1080p',
+    sorting: '/jobs?sort=created_at&order=desc',
+    search: '/jobs?title=video&page=1',
+    combined: '/jobs?page=2&limit=5&status=completed&sort=cpu_time_seconds&order=desc',
+    versioning: 'Add header: API-Version: v1'
+  },
+
+  api_examples: {
+    pagination: '/jobs?page=1&limit=10',
+    filtering: '/jobs?status=processing&quality=slow&resolution=1080p',
+    sorting: '/jobs?sort=created_at&order=desc',
+    search: '/jobs?title=video&page=1',
+    combined: '/jobs?page=2&limit=5&status=completed&sort=cpu_time_seconds&order=desc',
+    versioning: 'Add header: API-Version: v1'
+  },
+
     api_examples: {
       pagination: '/jobs?page=1&limit=10',
       filtering: '/jobs?status=processing&quality=slow',

@@ -394,6 +394,7 @@
                 <button class="btn" onclick="uploadAllVideos()" id="uploadBtn" style="font-size: 18px; padding: 15px 40px;">
                     🚀 Start CPU-Intensive Processing
                 </button>
+                <button class="btn btn-secondary" onclick="createJobOnly()">📝 Create Job Only (No Upload)</button>
                 <button class="btn btn-secondary" onclick="clearFiles()">Clear Files</button>
 
                 <div id="uploadStatus"></div>
@@ -775,7 +776,6 @@
             jobsList.innerHTML = data.data.map(job => `
                 <div class="task-item ${job.status}">
                     <h4>${job.title}</h4>
-                    <p><strong>Status:</strong> ${job.status.toUpperCase()}</p>
                     <p><strong>Description:</strong> ${job.description || 'No description'}</p>
                     <p><strong>Input File:</strong> ${job.input_filename || 'No file'}</p>
                     <p><strong>Settings:</strong> ${job.resolution} • ${job.quality} quality • ${job.codec} codec</p>
@@ -858,42 +858,199 @@
         }
 
         // View job details with HATEOAS links
-        async function viewJob(jobId) {
-            try {
-                const response = await fetch(`/jobs/${jobId}`, {
-                    headers: {
-                        'Authorization': `Bearer ${currentToken}`,
-                        'API-Version': 'v1'
-                    }
-                });
+        // View job details with edit options
+            async function viewJob(jobId) {
+                try {
+                    const response = await fetch(`/jobs/${jobId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${currentToken}`,
+                            'API-Version': 'v1'
+                        }
+                    });
 
-                const data = await response.json();
-                
-                if (response.ok) {
-                    let details = `Job Details:\n\n`;
-                    details += `ID: ${data.data.id}\n`;
-                    details += `Title: ${data.data.title}\n`;
-                    details += `Status: ${data.data.status}\n`;
-                    details += `Input File: ${data.data.input_filename || 'None'}\n`;
-                    details += `Settings: ${data.data.resolution} • ${data.data.quality} • ${data.data.codec}\n`;
-                    details += `Progress: ${data.data.progress}%\n`;
-                    details += `CPU Time: ${data.data.cpu_time_seconds}s\n`;
-                    details += `Created: ${new Date(data.data.created_at).toLocaleString()}\n`;
+                    const data = await response.json();
                     
-                    if (data.links) {
-                        details += `\nHATEOAS Links:\n`;
-                        Object.entries(data.links).forEach(([key, url]) => {
-                            details += `${key}: ${url}\n`;
-                        });
+                    if (response.ok) {
+                        const job = data.data;
+                        
+                        // Show detailed view with options
+                        const choice = prompt(`📋 Job Details:
+
+            🆔 ID: ${job.id}
+            📝 Title: ${job.title}
+            📊 Status: ${job.status}
+            📈 Progress: ${job.progress}%
+            📁 Input File: ${job.input_filename || 'None'}
+            ⚙️ Settings: ${job.resolution} • ${job.quality} • ${job.codec}
+            ⏱️ CPU Time: ${job.cpu_time_seconds}s
+            📅 Created: ${new Date(job.created_at).toLocaleString()}
+            ${job.started_at ? `🚀 Started: ${new Date(job.started_at).toLocaleString()}` : ''}
+            ${job.completed_at ? `✅ Completed: ${new Date(job.completed_at).toLocaleString()}` : ''}
+            ${job.error_message ? `❌ Error: ${job.error_message}` : ''}
+
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            What would you like to do?
+
+            E - Edit this job (PUT /jobs/:id)
+            L - View HATEOAS Links  
+            C - Close
+
+            Enter your choice (E/L/C):`, "C");
+                        
+                        switch(choice?.toUpperCase()) {
+                            case 'E':
+                                editJobFromDetails(jobId, job);
+                                break;
+                            case 'L':
+                                showHATEOASLinks(data.links);
+                                break;
+                            default:
+                                // Close - do nothing
+                                break;
+                        }
+                    } else {
+                        alert(`❌ Error: ${data.error}`);
                     }
-                    
-                    alert(details);
-                } else {
-                    alert(`Error: ${data.error}`);
+                } catch (error) {
+                    alert('❌ Network error loading job details');
                 }
-            } catch (error) {
-                alert('Network error loading job details');
             }
+
+
+// Edit job from details view
+function editJobFromDetails(jobId, currentJob) {
+    const action = prompt(`✏️ Edit Job - What do you want to change?
+
+Current Values:
+📝 Title: ${currentJob.title}
+📊 Status: ${currentJob.status}  
+📈 Progress: ${currentJob.progress}%
+📄 Description: ${currentJob.description || 'None'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Choose what to edit:
+
+T - Edit Title
+S - Edit Status
+P - Edit Progress  
+D - Edit Description
+A - Edit All Fields
+C - Cancel
+
+Enter your choice (T/S/P/D/A/C):`, "C");
+    
+    switch(action?.toUpperCase()) {
+        case 'T':
+            editJobTitle(jobId, currentJob);
+            break;
+        case 'S':
+            editJobStatus(jobId, currentJob);
+            break;
+        case 'P':
+            editJobProgress(jobId, currentJob);
+            break;
+        case 'D':
+            editJobDescription(jobId, currentJob);
+            break;
+        case 'A':
+            editJobAllFields(jobId, currentJob);
+            break;
+        default:
+            // Cancel
+            break;
+    }
+}
+
+// Edit job title
+function editJobTitle(jobId, currentJob) {
+    const newTitle = prompt(`✏️ Edit Job Title:
+
+Current: ${currentJob.title}
+
+Enter new title:`, currentJob.title);
+    
+    if (newTitle && newTitle !== currentJob.title) {
+        updateJobViaAPI(jobId, { title: newTitle.trim() });
+    }
+}
+
+// Edit job status
+function editJobStatus(jobId, currentJob) {
+    const newStatus = prompt(`✏️ Edit Job Status:
+
+Current: ${currentJob.status}
+
+Available options:
+- pending - Job is waiting to start
+- processing - Job is currently running  
+- completed - Job finished successfully
+- failed - Job encountered an error
+
+Enter new status:`, currentJob.status);
+    
+    if (newStatus && ['pending', 'processing', 'completed', 'failed'].includes(newStatus)) {
+        updateJobViaAPI(jobId, { status: newStatus });
+    } else if (newStatus) {
+        alert('❌ Invalid status. Use: pending, processing, completed, or failed');
+    }
+}
+
+// Edit job progress
+function editJobProgress(jobId, currentJob) {
+    const newProgress = prompt(`✏️ Edit Job Progress:
+
+Current: ${currentJob.progress}%
+
+Enter new progress (0-100):`, currentJob.progress);
+    
+    if (newProgress !== null && !isNaN(newProgress)) {
+        const progress = Math.max(0, Math.min(100, parseInt(newProgress)));
+        updateJobViaAPI(jobId, { progress: progress });
+    } else if (newProgress !== null) {
+        alert('❌ Please enter a number between 0 and 100');
+    }
+}
+
+// Edit job description  
+function editJobDescription(jobId, currentJob) {
+    const newDescription = prompt(`✏️ Edit Job Description:
+
+Current: ${currentJob.description || 'None'}
+
+Enter new description:`, currentJob.description || '');
+    
+    if (newDescription !== null) {
+        updateJobViaAPI(jobId, { description: newDescription.trim() });
+    }
+}
+
+        // Edit all fields at once
+        function editJobAllFields(jobId, currentJob) {
+            const newTitle = prompt(`✏️ Edit Title:`, currentJob.title);
+            if (!newTitle) return;
+            
+            const newStatus = prompt(`✏️ Edit Status (pending/processing/completed/failed):`, currentJob.status);
+            if (!['pending', 'processing', 'completed', 'failed'].includes(newStatus)) {
+                alert('❌ Invalid status');
+                return;
+            }
+            
+            const newProgress = prompt(`✏️ Edit Progress (0-100):`, currentJob.progress);
+            if (isNaN(newProgress) || newProgress < 0 || newProgress > 100) {
+                alert('❌ Invalid progress');
+                return;
+            }
+            
+            const newDescription = prompt(`✏️ Edit Description:`, currentJob.description || '');
+            
+            const updateData = {
+                title: newTitle.trim(),
+                status: newStatus,
+                progress: parseInt(newProgress),
+                description: newDescription.trim()
+            };
+            
+            updateJobViaAPI(jobId, updateData);
         }
 
         // Download processed video

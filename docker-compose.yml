@@ -1,4 +1,3 @@
-# docker-compose.yml
 version: '3.8'
 
 services:
@@ -16,7 +15,7 @@ services:
       - videonet
 
   video-api:
-    build: .
+    image: 901444280953.dkr.ecr.ap-southeast-2.amazonaws.com/n11789450-video-processor:latest
     container_name: video-processor
     ports:
       - "80:3000"
